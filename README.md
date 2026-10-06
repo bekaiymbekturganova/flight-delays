@@ -22,7 +22,7 @@ departure times, no weather that has not happened yet.
 | Clean | `clean.py` | Keeps flights that departed, labels 15+ minute delays (DuckDB) |
 | Features | `features.py` | Schedule features plus 28-day trailing delay rates by airport, carrier, route and airport-hour |
 | Train | `model.py` | Two baselines and LightGBM, split by time |
-| Report | `report.py` | Static results page: metrics, calibration, delay by hour, feature importance |
+| Report | `report.py`, `dashboard.html` | Interactive results site: filter test-period predictions by day, airport, airline and time of day |
 | Serve | `api.py` | FastAPI endpoint returning a delay probability |
 
 ## Decisions
