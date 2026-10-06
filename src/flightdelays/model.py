@@ -29,6 +29,57 @@ from .config import (
 )
 
 SNAPSHOT_PATH = ARTIFACTS_DIR / "snapshot.parquet"
+CUBE_PATH = ARTIFACTS_DIR / "cube.json"
+
+# Time-of-day buckets used on the results site, by scheduled local hour.
+DAYPARTS = ["Morning (5-11)", "Midday (11-16)", "Evening (16-21)", "Night (21-5)"]
+TOP_AIRPORTS = 30
+OTHER = "Other airports"
+
+
+def daypart(hour: pd.Series) -> pd.Series:
+    return pd.cut(
+        (hour - 5) % 24, bins=[-1, 5, 10, 15, 23], labels=range(4)
+    ).astype(int)
+
+
+def prediction_cube(test_df: pd.DataFrame, p_test: np.ndarray) -> dict:
+    """Test-period predictions aggregated for the results site.
+
+    One row per (day, airport, carrier, time of day) with the number of
+    flights, how many were late, and the sum of predicted probabilities.
+    Small airports are grouped so the file stays small.
+    """
+    frame = pd.DataFrame(
+        {
+            "date": test_df["flight_date"].dt.strftime("%Y-%m-%d").to_numpy(),
+            "origin": test_df["origin"].to_numpy(),
+            "carrier": test_df["carrier"].to_numpy(),
+            "part": daypart(test_df["dep_hour"]).to_numpy(),
+            "late": test_df[TARGET].to_numpy(),
+            "p": p_test,
+        }
+    )
+    top = frame["origin"].value_counts().head(TOP_AIRPORTS).index
+    frame["origin"] = frame["origin"].where(frame["origin"].isin(top), OTHER)
+    dates = sorted(frame["date"].unique())
+    origins = sorted(o for o in frame["origin"].unique() if o != OTHER)
+    if (frame["origin"] == OTHER).any():
+        origins.append(OTHER)
+    carriers = sorted(frame["carrier"].unique())
+    grouped = (
+        frame.groupby(["date", "origin", "carrier", "part"], observed=True)
+        .agg(n=("late", "size"), late=("late", "sum"), p=("p", "sum"))
+        .reset_index()
+    )
+    d_ix = {v: i for i, v in enumerate(dates)}
+    o_ix = {v: i for i, v in enumerate(origins)}
+    c_ix = {v: i for i, v in enumerate(carriers)}
+    rows = [
+        [d_ix[r.date], o_ix[r.origin], c_ix[r.carrier], int(r.part), int(r.n), int(r.late), round(float(r.p), 2)]
+        for r in grouped.itertuples()
+    ]
+    return {"dates": dates, "origins": origins, "carriers": carriers, "parts": DAYPARTS, "rows": rows}
 
 
 def load(path: Path = FEATURES_PATH) -> pd.DataFrame:
@@ -168,6 +219,9 @@ def train(features_path: Path = FEATURES_PATH, artifacts_dir: Path = ARTIFACTS_D
     booster.save_model(str(artifacts_dir / MODEL_PATH.name), num_iteration=booster.best_iteration)
     (artifacts_dir / CATEGORIES_PATH.name).write_text(json.dumps(categories))
     (artifacts_dir / METRICS_PATH.name).write_text(json.dumps(metrics, indent=2))
+    (artifacts_dir / CUBE_PATH.name).write_text(
+        json.dumps(prediction_cube(test_df, p_test), separators=(",", ":"))
+    )
     save_snapshot(df, artifacts_dir / SNAPSHOT_PATH.name)
     return metrics
 
