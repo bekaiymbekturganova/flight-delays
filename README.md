@@ -11,8 +11,8 @@ train, evaluate, publish a results page, and serve predictions over HTTP.
 An operations planner looking at tomorrow's schedule wants to know which
 departures are most likely to run late, early enough to move staff or gates.
 So the model may only use what is known **the day before**: the published
-schedule and delay history up to yesterday. No same-day outcomes, no actual
-departure times, no weather that has not happened yet.
+schedule, the aircraft's planned rotation, the weather forecast, and delay
+history up to yesterday. No same-day outcomes and no actual departure times.
 
 ## How it works
 
@@ -20,7 +20,8 @@ departure times, no weather that has not happened yet.
 |---|---|---|
 | Download | `download.py` | Fetches monthly files from BTS |
 | Clean | `clean.py` | Keeps flights that departed, labels 15+ minute delays (DuckDB) |
-| Features | `features.py` | Schedule features plus 28-day trailing delay rates by airport, carrier, route and airport-hour |
+| Weather | `weather.py` | Daily forecast weather per airport from Open-Meteo's forecast archive |
+| Features | `features.py` | Schedule, 28-day trailing delay rates, the aircraft's scheduled rotation, weather at origin and destination |
 | Train | `model.py` | Two baselines and LightGBM, split by time |
 | Report | `report.py`, `dashboard.html` | Interactive results site: filter test-period predictions by day, airport, airline and time of day |
 | Serve | `api.py` | FastAPI endpoint returning a delay probability |
@@ -38,6 +39,15 @@ departure times, no weather that has not happened yet.
 - **PR-AUC and calibration, not accuracy.** Most flights leave on time, so
   "never delayed" scores high accuracy and helps nobody. The report shows
   whether a predicted 30% means roughly 30%.
+- **Rotation from the schedule, not from what happened.** How late the
+  aircraft's previous leg ran is the best single predictor of a delay, but it
+  is not known the day before. The model uses what the schedule shows instead:
+  which leg of the day this is for the aircraft and how long the planned
+  turnaround is.
+- **Forecast weather, not observed weather.** Weather comes from an archive of
+  past model forecasts. Observed weather would be leakage.
+- **Every addition is measured.** The report keeps the schedule-and-history
+  model next to the full one, so the gain from rotation and weather is visible.
 - **Cancelled and diverted flights are excluded.** They have no departure
   delay, and cancellations have different causes.
 
@@ -73,7 +83,12 @@ They are not copied here by hand, so the numbers always match the code.
 
 ## Limits
 
-- No weather or aircraft-rotation features yet. Both are known to matter.
+- The forecast archive holds short-lead model runs, a slightly optimistic
+  stand-in for a forecast issued exactly one day ahead.
+- Aircraft assignments can change on the day. The rotation features assume the
+  planned tail number is known the day before.
+- Weather is daily. Hourly forecasts around departure time would be sharper.
+- The API does not take rotation or weather inputs yet and treats them as missing.
 - The serving snapshot uses the last four weeks of the training data. A real
   deployment would refresh it daily.
 - Tests run on synthetic flights in the BTS layout. They check the logic, not
