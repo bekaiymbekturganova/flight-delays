@@ -44,6 +44,6 @@ def download(start: str, end: str, out_dir: Path = RAW_DIR) -> list[Path]:
     paths = []
     for year, month in month_range(start, end):
         path = download_month(year, month, out_dir)
-        print(f"{year}-{month:02d}: {path} ({path.stat().st_size / 1e6:.0f} MB)")
+        print(f"{year}-{month:02d}: {path} ({path.stat().st_size / 1e6:.0f} MB)", flush=True)
         paths.append(path)
     return paths

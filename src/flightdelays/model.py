@@ -17,6 +17,7 @@ from sklearn.preprocessing import StandardScaler
 
 from .config import (
     ARTIFACTS_DIR,
+    BASE_FEATURES,
     CATEGORICAL,
     CATEGORIES_PATH,
     FEATURES,
@@ -163,24 +164,34 @@ def train(features_path: Path = FEATURES_PATH, artifacts_dir: Path = ARTIFACTS_D
     results["logistic_regression"] = score(y_test, logit.predict_proba(X_test[NUMERIC])[:, 1])
 
     # Gradient boosting, stopped early on the validation period.
-    booster = lgb.train(
-        {
-            "objective": "binary",
-            "learning_rate": 0.05,
-            "num_leaves": 63,
-            "min_data_in_leaf": 100,
-            "feature_fraction": 0.8,
-            "bagging_fraction": 0.8,
-            "bagging_freq": 1,
-            "cat_smooth": 20,
-            "verbose": -1,
-            "seed": 7,
-        },
-        lgb.Dataset(X_train, y_train),
-        num_boost_round=2000,
-        valid_sets=[lgb.Dataset(X_valid, y_valid)],
-        callbacks=[lgb.early_stopping(50, verbose=False)],
+    params = {
+        "objective": "binary",
+        "learning_rate": 0.05,
+        "num_leaves": 63,
+        "min_data_in_leaf": 100,
+        "feature_fraction": 0.8,
+        "bagging_fraction": 0.8,
+        "bagging_freq": 1,
+        "cat_smooth": 20,
+        "verbose": -1,
+        "seed": 7,
+    }
+
+    def fit(columns: list[str]) -> lgb.Booster:
+        return lgb.train(
+            params,
+            lgb.Dataset(X_train[columns], y_train),
+            num_boost_round=2000,
+            valid_sets=[lgb.Dataset(X_valid[columns], y_valid)],
+            callbacks=[lgb.early_stopping(50, verbose=False)],
+        )
+
+    # Same model without rotation and weather, to measure what they add.
+    base = fit(BASE_FEATURES)
+    results["gradient_boosting_base"] = score(
+        y_test, base.predict(X_test[BASE_FEATURES], num_iteration=base.best_iteration)
     )
+    booster = fit(FEATURES)
     p_test = booster.predict(X_test, num_iteration=booster.best_iteration)
     results["gradient_boosting"] = score(y_test, p_test)
 

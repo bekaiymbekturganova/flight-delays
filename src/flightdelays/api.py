@@ -13,7 +13,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
-from .config import ARTIFACTS_DIR, CATEGORIES_PATH, MODEL_PATH
+from .config import ARTIFACTS_DIR, CATEGORIES_PATH, FEATURES, MODEL_PATH
 from .model import SNAPSHOT_PATH, to_matrix
 
 app = FastAPI(title="Flight delay risk", version="0.1.0")
@@ -73,6 +73,10 @@ def predict(flight: Flight) -> Prediction:
         day_of_week=flight.flight_date.isoweekday(),
         month=flight.flight_date.month,
     )
+    # Aircraft rotation and weather are not known to this endpoint yet. LightGBM
+    # treats them as missing, so the answer leans on schedule and history.
+    for name in FEATURES:
+        row.setdefault(name, None)
     X = to_matrix(pd.DataFrame([row]), categories)
     probability = float(booster.predict(X)[0])
     rate = row.get("route_rate")

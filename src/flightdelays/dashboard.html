@@ -107,7 +107,7 @@ tr.best td{font-weight:700}
 </main>
 
 <script>
-const LABELS = {route_history: "Route's 28-day delay rate", logistic_regression: "Logistic regression", gradient_boosting: "Gradient boosting (LightGBM)"};
+const LABELS = {route_history: "Route's 28-day delay rate", logistic_regression: "Logistic regression", gradient_boosting_base: "Gradient boosting, schedule and history only", gradient_boosting: "Gradient boosting + aircraft rotation + weather"};
 const $ = id => document.getElementById(id);
 const pct = x => isFinite(x) ? (100 * x).toFixed(1) + "%" : "–";
 const num = x => x.toLocaleString("en-US");

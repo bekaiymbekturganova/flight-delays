@@ -14,6 +14,10 @@ COPY (
         Reporting_Airline                              AS carrier,
         Origin                                         AS origin,
         Dest                                           AS dest,
+        nullif(trim(Tail_Number), '')                  AS tail,
+        -- Scheduled local times as minutes after midnight.
+        (TRY_CAST(CRSDepTime AS INTEGER) // 100) * 60 + TRY_CAST(CRSDepTime AS INTEGER) % 100 AS dep_min,
+        (TRY_CAST(CRSArrTime AS INTEGER) // 100) * 60 + TRY_CAST(CRSArrTime AS INTEGER) % 100 AS arr_min,
         -- CRSDepTime is local scheduled time as an hhmm integer; 2400 means midnight.
         CAST(floor(TRY_CAST(CRSDepTime AS INTEGER) / 100) AS INTEGER) % 24 AS dep_hour,
         TRY_CAST(CRSElapsedTime AS DOUBLE)                 AS crs_elapsed,
