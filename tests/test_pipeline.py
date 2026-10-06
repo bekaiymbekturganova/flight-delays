@@ -8,7 +8,7 @@ import pytest
 from flightdelays import model
 from flightdelays.config import FEATURES, HISTORY_DAYS
 from flightdelays.download import month_range
-from flightdelays.report import render
+from flightdelays.report import write_report
 
 
 def test_month_range_crosses_year():
@@ -87,9 +87,23 @@ def test_train_beats_guessing_and_writes_artifacts(workdir):
     gb = metrics["test_metrics"]["gradient_boosting"]
     assert gb["pr_auc"] > metrics["data"]["test_delay_rate"]
     assert gb["roc_auc"] > 0.55
-    for name in ("model.txt", "categories.json", "metrics.json", "snapshot.parquet"):
+    for name in ("model.txt", "categories.json", "metrics.json", "snapshot.parquet", "cube.json"):
         assert (out / name).exists()
-    assert "Results on the test period" in render(json.loads((out / "metrics.json").read_text()))
+
+
+def test_site_data_adds_up_to_the_test_period(workdir):
+    out = workdir["root"] / "artifacts"
+    if not (out / "cube.json").exists():
+        model.train(workdir["root"] / "features.parquet", out)
+    site = workdir["root"] / "site"
+    assert write_report(out, site).exists()
+    data = json.loads((site / "data.json").read_text())
+    cube, test = data["cube"], data["metrics"]["data"]["test"]
+    assert sum(r[4] for r in cube["rows"]) == test["flights"]
+    late = sum(r[5] for r in cube["rows"]) / test["flights"]
+    assert abs(late - data["metrics"]["data"]["test_delay_rate"]) < 1e-3
+    assert cube["dates"][0] == test["from"] and cube["dates"][-1] == test["to"]
+    assert all(0 <= r[6] <= r[4] for r in cube["rows"])
 
 
 def test_api_predicts_a_probability(workdir, monkeypatch):
