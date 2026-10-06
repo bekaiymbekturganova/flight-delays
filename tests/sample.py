@@ -25,6 +25,11 @@ def make_raw(days: int = 120, per_day: int = 400, seed: int = 0) -> pd.DataFrame
     late = rng.random(n) < risk
     delay = np.where(late, rng.integers(15, 180, n), rng.integers(-10, 15, n)).astype(float)
     cancelled = (rng.random(n) < 0.02).astype(float)
+    minute = rng.integers(0, 60, n)
+    elapsed = rng.integers(60, 360, n)
+    arrive = (hour * 60 + minute + elapsed) % 1440
+    # 60 aircraft; each flies several legs a day.
+    tail = np.array([f"N{t:03d}AA" for t in rng.integers(0, 60, n)])
     start = date(2025, 1, 1)
     return pd.DataFrame(
         {
@@ -32,8 +37,10 @@ def make_raw(days: int = 120, per_day: int = 400, seed: int = 0) -> pd.DataFrame
             "Reporting_Airline": carrier,
             "Origin": origin,
             "Dest": dest,
-            "CRSDepTime": [f"{h:02d}{m:02d}" for h, m in zip(hour, rng.integers(0, 60, n))],
-            "CRSElapsedTime": rng.integers(60, 360, n).astype(float),
+            "Tail_Number": tail,
+            "CRSDepTime": [f"{h:02d}{m:02d}" for h, m in zip(hour, minute)],
+            "CRSArrTime": [f"{a // 60:02d}{a % 60:02d}" for a in arrive],
+            "CRSElapsedTime": elapsed.astype(float),
             "Distance": rng.integers(200, 2600, n).astype(float),
             "DepDelay": np.where(cancelled == 1, np.nan, delay),
             "Cancelled": cancelled,
@@ -48,3 +55,21 @@ def write_raw(raw_dir: Path, **kwargs) -> pd.DataFrame:
     df = make_raw(**kwargs)
     df.to_csv(raw_dir / "ontime_sample.csv", index=False)
     return df
+
+
+def make_weather(raw: pd.DataFrame, seed: int = 1) -> pd.DataFrame:
+    """Fake daily weather for every airport and date in the sample."""
+    rng = np.random.default_rng(seed)
+    dates = sorted(pd.to_datetime(raw["FlightDate"]).dt.date.unique())
+    rows = [(a, d) for a in AIRPORTS for d in dates]
+    n = len(rows)
+    return pd.DataFrame(
+        {
+            "airport": [r[0] for r in rows],
+            "date": [r[1] for r in rows],
+            "precip_mm": rng.gamma(0.4, 6.0, n).round(1),
+            "snow_cm": np.zeros(n),
+            "gust_kmh": rng.uniform(10, 80, n).round(1),
+            "temp_min_c": rng.uniform(-5, 25, n).round(1),
+        }
+    )

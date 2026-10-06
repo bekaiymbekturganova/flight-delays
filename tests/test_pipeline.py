@@ -64,13 +64,55 @@ def test_no_leakage_from_the_flight_day(workdir, tmp_path):
 
     from flightdelays.features import build_features
 
-    build_features(tmp_path / "t.parquet", tmp_path / "f.parquet")
+    build_features(tmp_path / "t.parquet", tmp_path / "f.parquet", workdir["root"] / "weather.parquet")
     order = "carrier, origin, dest, dep_hour, distance, crs_elapsed"
     cols = ", ".join(FEATURES)
     con = duckdb.connect()
     a = con.execute(f"SELECT {cols} FROM '{workdir['root'] / 'features.parquet'}' WHERE flight_date = ? ORDER BY {order}", [day]).df()
     b = con.execute(f"SELECT {cols} FROM '{tmp_path / 'f.parquet'}' WHERE flight_date = ? ORDER BY {order}", [day]).df()
     pd.testing.assert_frame_equal(a, b)
+
+
+def test_rotation_follows_the_scheduled_day(workdir):
+    feats = pd.read_parquet(workdir["root"] / "features.parquet")
+    assert feats.leg_number.min() == 1
+    assert (feats.leg_number <= feats.legs_that_day).all()
+    # A first leg has no previous arrival to turn around from.
+    assert feats.loc[feats.leg_number == 1, "turnaround_min"].isna().all()
+    assert feats.turnaround_min.dropna().between(0, 720).all()
+    assert feats.turnaround_min.notna().any()
+
+
+def test_weather_joins_by_airport_and_day(workdir):
+    feats = pd.read_parquet(workdir["root"] / "features.parquet")
+    weather = pd.read_parquet(workdir["root"] / "weather.parquet")
+    row = feats.iloc[1234]
+    day = pd.to_datetime(row.flight_date).date()
+    at = lambda code: weather[(weather.airport == code) & (weather.date == day)].iloc[0]
+    assert row.origin_gust_kmh == at(row.origin).gust_kmh
+    assert row.dest_precip_mm == at(row.dest).precip_mm
+
+
+def test_features_build_without_weather(workdir, tmp_path):
+    from flightdelays.features import build_features
+
+    build_features(workdir["root"] / "flights.parquet", tmp_path / "f.parquet", weather=None)
+    feats = pd.read_parquet(tmp_path / "f.parquet")
+    assert feats.origin_gust_kmh.isna().all()
+    assert set(FEATURES) <= set(feats.columns)
+
+
+def test_weather_response_is_parsed_per_airport():
+    from flightdelays.weather import parse_response
+
+    daily = lambda gust: {"time": ["2025-06-01", "2025-06-02"], "precipitation_sum": [0.0, 1.2],
+                          "snowfall_sum": [0, 0], "wind_gusts_10m_max": gust, "temperature_2m_min": [9.9, None]}
+    out = parse_response([{"daily": daily([58.3, 37.8])}, {"daily": daily([27.7, 26.6])}], ["BOS", "LAX"])
+    assert len(out) == 4
+    assert out[out.airport == "LAX"].gust_kmh.tolist() == [27.7, 26.6]
+    assert out.temp_min_c.isna().sum() == 2
+    with pytest.raises(ValueError):
+        parse_response([{"daily": daily([1, 2])}], ["BOS", "LAX"])
 
 
 def test_split_is_ordered_in_time(workdir):
