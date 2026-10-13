@@ -167,3 +167,16 @@ def test_api_predicts_a_probability(workdir, monkeypatch):
     assert client.post("/predict", json={**body, "origin": "ZZZ"}).status_code == 404
     assert client.post("/predict", json={**body, "dep_hour": 30}).status_code == 422
     api._load.cache_clear()
+
+
+def test_weather_batch_that_keeps_timing_out_is_skipped(monkeypatch):
+    import requests
+    from flightdelays import weather
+
+    def always_times_out(*args, **kwargs):
+        raise requests.Timeout("read timed out")
+
+    monkeypatch.setattr(weather.requests, "get", always_times_out)
+    monkeypatch.setattr(weather.time, "sleep", lambda seconds: None)
+    batch = pd.DataFrame({"airport": ["BOS", "JFK"], "lat": [42.36, 40.64], "lon": [-71.0, -73.78]})
+    assert weather.fetch_batch(batch, "2025-01-01", "2025-01-02") is None
