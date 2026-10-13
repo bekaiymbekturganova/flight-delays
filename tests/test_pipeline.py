@@ -180,3 +180,15 @@ def test_weather_batch_that_keeps_timing_out_is_skipped(monkeypatch):
     monkeypatch.setattr(weather.time, "sleep", lambda seconds: None)
     batch = pd.DataFrame({"airport": ["BOS", "JFK"], "lat": [42.36, 40.64], "lon": [-71.0, -73.78]})
     assert weather.fetch_batch(batch, "2025-01-01", "2025-01-02") is None
+
+
+def test_weather_cache_is_used_only_when_it_covers_the_dates(tmp_path):
+    import datetime as dt
+    from flightdelays.weather import load_cache
+
+    days = [dt.date(2025, 1, 1) + dt.timedelta(days=i) for i in range(10)]
+    pd.DataFrame({"airport": "BOS", "date": days, "precip_mm": 0.0}).to_parquet(tmp_path / "w.parquet")
+    hit = load_cache(tmp_path / "w.parquet", dt.date(2025, 1, 2), dt.date(2025, 1, 5))
+    assert len(hit) == 4
+    assert load_cache(tmp_path / "w.parquet", dt.date(2025, 1, 1), dt.date(2025, 2, 1)) is None
+    assert load_cache(tmp_path / "missing.parquet", dt.date(2025, 1, 1), dt.date(2025, 1, 5)) is None
