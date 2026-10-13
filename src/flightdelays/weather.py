@@ -21,9 +21,12 @@ from .config import AIRPORTS_URL, CLEAN_PATH, WEATHER_PATH, WEATHER_URL, WEATHER
 # roughly 600 units a minute. A year of data for 10 airports is about 260 units,
 # so requests are small and spaced out. Weather is fetched for the busiest
 # airports only; the rest get missing values, which the model handles.
-BATCH = 10
-PAUSE_SECONDS = 30
+# The service is also slow at times, so a batch that keeps timing out is skipped
+# rather than failing the whole pipeline: those airports just get missing values.
+BATCH = 5
+PAUSE_SECONDS = 15
 TOP_AIRPORTS = 60
+RETRIES = 4
 
 
 def airport_coordinates(codes: list[str]) -> pd.DataFrame:
@@ -54,7 +57,8 @@ def parse_response(payload, airports: list[str]) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
-def fetch_batch(batch: pd.DataFrame, start: str, end: str, retries: int = 4) -> pd.DataFrame:
+def fetch_batch(batch: pd.DataFrame, start: str, end: str, retries: int = RETRIES) -> pd.DataFrame | None:
+    """One request for a few airports. Returns None if it keeps failing."""
     params = {
         "latitude": ",".join(f"{v:.4f}" for v in batch["lat"]),
         "longitude": ",".join(f"{v:.4f}" for v in batch["lon"]),
@@ -64,14 +68,21 @@ def fetch_batch(batch: pd.DataFrame, start: str, end: str, retries: int = 4) -> 
         "timezone": "auto",  # days are local to each airport, like the flight dates
     }
     for attempt in range(retries):
-        response = requests.get(WEATHER_URL, params=params, timeout=120)
-        if response.status_code == 429 and attempt < retries - 1:
-            print(f"weather: rate limited, waiting ({response.text[:120]})", flush=True)
-            time.sleep(65 * (attempt + 1))
+        wait = 65 * (attempt + 1)
+        try:
+            response = requests.get(WEATHER_URL, params=params, timeout=180)
+        except (requests.Timeout, requests.ConnectionError) as error:
+            print(f"weather: {type(error).__name__}, retrying in {wait}s", flush=True)
+            time.sleep(wait)
             continue
-        response.raise_for_status()
+        if response.status_code == 429 or response.status_code >= 500:
+            print(f"weather: HTTP {response.status_code}, retrying in {wait}s", flush=True)
+            time.sleep(wait)
+            continue
+        response.raise_for_status()  # a 4xx other than 429 is a bug in the request, so fail loudly
         return parse_response(response.json(), batch["airport"].tolist())
-    raise RuntimeError("weather request kept failing")
+    print(f"weather: giving up on {', '.join(batch['airport'])}", flush=True)
+    return None
 
 
 def download_weather(
@@ -92,10 +103,18 @@ def download_weather(
         print(f"weather: no coordinates for {len(missing)} airports: {', '.join(missing[:10])}", flush=True)
     frames = []
     for i in range(0, len(coords), BATCH):
-        frames.append(fetch_batch(coords.iloc[i : i + BATCH], str(start), str(end)))
-        print(f"weather: {min(i + BATCH, len(coords))}/{len(coords)} airports", flush=True)
+        frame = fetch_batch(coords.iloc[i : i + BATCH], str(start), str(end))
+        if frame is not None:
+            frames.append(frame)
+        print(f"weather: {min(i + BATCH, len(coords))}/{len(coords)} airports done", flush=True)
         if i + BATCH < len(coords):
             time.sleep(PAUSE_SECONDS)
+    got = sum(f["airport"].nunique() for f in frames)
+    print(f"weather: have data for {got} of {len(coords)} airports", flush=True)
+    if not frames:
+        # No file means the feature step leaves the weather columns empty.
+        out_path.unlink(missing_ok=True)
+        return 0
     weather = pd.concat(frames, ignore_index=True)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     weather.to_parquet(out_path, index=False)
