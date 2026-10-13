@@ -17,7 +17,13 @@ import requests
 
 from .config import AIRPORTS_URL, CLEAN_PATH, WEATHER_PATH, WEATHER_URL, WEATHER_VARS
 
-BATCH = 40  # airports per request
+# Open-Meteo's free tier weighs a request by locations x days, and allows
+# roughly 600 units a minute. A year of data for 10 airports is about 260 units,
+# so requests are small and spaced out. Weather is fetched for the busiest
+# airports only; the rest get missing values, which the model handles.
+BATCH = 10
+PAUSE_SECONDS = 30
+TOP_AIRPORTS = 60
 
 
 def airport_coordinates(codes: list[str]) -> pd.DataFrame:
@@ -60,21 +66,24 @@ def fetch_batch(batch: pd.DataFrame, start: str, end: str, retries: int = 4) -> 
     for attempt in range(retries):
         response = requests.get(WEATHER_URL, params=params, timeout=120)
         if response.status_code == 429 and attempt < retries - 1:
-            time.sleep(20 * (attempt + 1))  # rate limited: wait and try again
+            print(f"weather: rate limited, waiting ({response.text[:120]})", flush=True)
+            time.sleep(65 * (attempt + 1))
             continue
         response.raise_for_status()
         return parse_response(response.json(), batch["airport"].tolist())
     raise RuntimeError("weather request kept failing")
 
 
-def download_weather(flights: Path = CLEAN_PATH, out_path: Path = WEATHER_PATH) -> int:
-    """Fetch weather for all airports and dates in the cleaned flights table."""
+def download_weather(
+    flights: Path = CLEAN_PATH, out_path: Path = WEATHER_PATH, top: int = TOP_AIRPORTS
+) -> int:
+    """Fetch weather for the busiest airports over the dates in the flights table."""
     con = duckdb.connect()
     start, end = con.execute(f"SELECT min(flight_date), max(flight_date) FROM '{flights}'").fetchone()
     codes = [
         r[0]
         for r in con.execute(
-            f"SELECT origin FROM '{flights}' UNION SELECT dest FROM '{flights}' ORDER BY 1"
+            f"SELECT origin FROM '{flights}' GROUP BY origin ORDER BY count(*) DESC, origin LIMIT {int(top)}"
         ).fetchall()
     ]
     coords = airport_coordinates(codes)
@@ -85,7 +94,8 @@ def download_weather(flights: Path = CLEAN_PATH, out_path: Path = WEATHER_PATH) 
     for i in range(0, len(coords), BATCH):
         frames.append(fetch_batch(coords.iloc[i : i + BATCH], str(start), str(end)))
         print(f"weather: {min(i + BATCH, len(coords))}/{len(coords)} airports", flush=True)
-        time.sleep(1)
+        if i + BATCH < len(coords):
+            time.sleep(PAUSE_SECONDS)
     weather = pd.concat(frames, ignore_index=True)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     weather.to_parquet(out_path, index=False)
