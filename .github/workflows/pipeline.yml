@@ -30,6 +30,13 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -e .
+      # Weather comes from a slow, rate-limited API, so keep it between runs.
+      # Each run saves a new cache entry and restores the newest one for the same months.
+      - uses: actions/cache@v4
+        with:
+          path: data/weather.parquet
+          key: weather-${{ inputs.start }}-${{ inputs.end }}-${{ github.run_id }}
+          restore-keys: weather-${{ inputs.start }}-${{ inputs.end }}-
       - name: Download, clean, build features, train, report
         run: flightdelays all --start "${{ inputs.start }}" --end "${{ inputs.end }}"
       - uses: actions/upload-artifact@v4
