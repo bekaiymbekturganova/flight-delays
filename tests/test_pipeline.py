@@ -239,3 +239,32 @@ def test_last_week_rate_matches_a_manual_calculation(workdir):
     ]
     got = feats.loc[feats.flight_date == day, "nation_7d_rate"]
     assert np.allclose(got, window.delayed.mean())
+
+
+def test_recalibration_only_uses_earlier_days():
+    """Changing outcomes on day D must not change the adjusted forecasts for day D."""
+    rng = np.random.default_rng(0)
+    dates = np.repeat(pd.date_range("2025-01-01", periods=40).to_numpy(), 50)
+    p = rng.uniform(0.05, 0.4, len(dates))
+    y = (rng.random(len(dates)) < p * 1.5).astype(int)
+    start = pd.Timestamp("2025-01-20")
+    a = model.recalibrate(dates, y, p, start)
+    target = pd.Timestamp("2025-01-30").to_datetime64()
+    y2 = y.copy()
+    y2[dates == target] = 1 - y2[dates == target]
+    b = model.recalibrate(dates, y2, p, start)
+    scored = dates[dates >= start.to_datetime64()]
+    assert np.allclose(a[scored <= target], b[scored <= target])
+    assert not np.allclose(a[scored > target], b[scored > target])
+
+
+def test_recalibration_fixes_a_forecast_that_runs_too_low():
+    rng = np.random.default_rng(1)
+    dates = np.repeat(pd.date_range("2025-01-01", periods=60).to_numpy(), 400)
+    true_p = rng.uniform(0.1, 0.5, len(dates))
+    y = (rng.random(len(dates)) < true_p).astype(int)
+    too_low = true_p * 0.7
+    start = pd.Timestamp("2025-01-20")
+    fixed = model.recalibrate(dates, y, too_low, start)
+    mask = dates >= start.to_datetime64()
+    assert abs(fixed.mean() - y[mask].mean()) < abs(too_low[mask].mean() - y[mask].mean()) / 3
