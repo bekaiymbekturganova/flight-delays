@@ -2,9 +2,10 @@
 
 The risk in this kind of problem is leakage: using something about the day of
 the flight (how late other flights ran, how late the aircraft's previous leg
-was) to "predict" it. Here the inputs are the published schedule, the aircraft's
-scheduled rotation, forecast weather, and delay history that ends the day
-before the flight. tests/test_pipeline.py checks that.
+was, which flights got cancelled) to "predict" it. Here the inputs are the
+published schedule (cancelled flights included), the aircraft's scheduled
+rotation, forecast weather, and delay history that ends the day before the
+flight. tests/test_pipeline.py checks that.
 """
 from __future__ import annotations
 
@@ -24,7 +25,7 @@ def _history_cte(name: str, keys: list[str]) -> str:
     cols = ", ".join(keys)
     return f"""
     {name}_daily AS (
-        SELECT {cols}, flight_date, count(*) AS n, sum(delayed) AS d
+        SELECT {cols}, flight_date, count(delayed) AS n, sum(delayed) AS d
         FROM flights GROUP BY {cols}, flight_date
     ),
     {name} AS (
@@ -97,18 +98,24 @@ def build_query(source: str, weather: str | None = None) -> str:
         f"{n}.{n}_rate, {n}.{n}_n" for n in HISTORIES
     )
     return f"""
-    WITH flights AS (SELECT row_number() OVER () AS flight_id, * FROM '{source}'),
+    WITH flights AS (
+        -- Scheduled traffic is published in advance, so it is fair to use. It is
+        -- counted here, before the WHERE at the bottom, because SQL applies WHERE
+        -- before window functions: counting later would skip cancelled flights.
+        SELECT *,
+            count(*) OVER (PARTITION BY origin, flight_date) AS origin_day_flights,
+            count(*) OVER (PARTITION BY origin, flight_date, dep_hour) AS origin_hour_flights
+        FROM '{source}'
+    ),
     {ctes},
     {ROTATION_CTE}
     {weather_cte}
     SELECT
-        f.flight_date, f.carrier, f.origin, f.dest, f.dep_hour,
+        f.flight_id, f.flight_date, f.carrier, f.origin, f.dest, f.dep_hour,
         isodow(f.flight_date) AS day_of_week,
         month(f.flight_date) AS month,
         f.distance, f.crs_elapsed,
-        -- Scheduled traffic is published in advance, so it is fair to use.
-        count(*) OVER (PARTITION BY f.origin, f.flight_date) AS origin_day_flights,
-        count(*) OVER (PARTITION BY f.origin, f.flight_date, f.dep_hour) AS origin_hour_flights,
+        f.origin_day_flights, f.origin_hour_flights,
         {history_cols},
         rotation.leg_number, rotation.legs_that_day, rotation.turnaround_min,
         {weather_cols},
@@ -117,6 +124,9 @@ def build_query(source: str, weather: str | None = None) -> str:
     {joins}
     LEFT JOIN rotation ON rotation.flight_id = f.flight_id
     {weather_joins}
+    -- Schedule features above are computed on every scheduled flight; only
+    -- flights that actually operated have a label to learn from.
+    WHERE f.operated
     """
 
 

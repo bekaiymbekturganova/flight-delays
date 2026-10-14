@@ -1,4 +1,11 @@
-"""Turn raw BTS CSV files into one tidy table of flights that departed."""
+"""Turn raw BTS CSV files into one tidy table of scheduled flights.
+
+Every scheduled flight is kept, including ones that were later cancelled or
+diverted, because the schedule is what is known the day before. Dropping
+cancelled flights here would leak the future into schedule features: on a storm
+day the airport would look quieter and aircraft would fly fewer legs.
+Rows with operated = false have no delay label and are left out of training.
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,6 +17,7 @@ from .config import CLEAN_PATH, DELAY_THRESHOLD_MIN, RAW_COLUMNS, RAW_DIR
 CLEAN_SQL = """
 COPY (
     SELECT
+        row_number() OVER ()                           AS flight_id,
         CAST(FlightDate AS DATE)                       AS flight_date,
         Reporting_Airline                              AS carrier,
         Origin                                         AS origin,
@@ -22,19 +30,23 @@ COPY (
         CAST(floor(TRY_CAST(CRSDepTime AS INTEGER) / 100) AS INTEGER) % 24 AS dep_hour,
         TRY_CAST(CRSElapsedTime AS DOUBLE)                 AS crs_elapsed,
         TRY_CAST(Distance AS DOUBLE)                       AS distance,
-        TRY_CAST(DepDelay AS DOUBLE)                   AS dep_delay,
-        CAST(TRY_CAST(DepDelay AS DOUBLE) >= {threshold} AS INTEGER) AS delayed
-    FROM read_csv(
-        '{glob}',
-        header = true,
-        union_by_name = true,
-        all_varchar = true,
-        ignore_errors = true
+        operated,
+        CASE WHEN operated THEN TRY_CAST(DepDelay AS DOUBLE) END AS dep_delay,
+        CASE WHEN operated THEN CAST(TRY_CAST(DepDelay AS DOUBLE) >= {threshold} AS INTEGER) END AS delayed
+    FROM (
+        SELECT *,
+            coalesce(TRY_CAST(Cancelled AS DOUBLE), 1) = 0
+            AND coalesce(TRY_CAST(Diverted AS DOUBLE), 1) = 0
+            AND TRY_CAST(DepDelay AS DOUBLE) IS NOT NULL AS operated
+        FROM read_csv(
+            '{glob}',
+            header = true,
+            union_by_name = true,
+            all_varchar = true,
+            ignore_errors = true
+        )
     )
-    WHERE TRY_CAST(Cancelled AS DOUBLE) = 0
-      AND TRY_CAST(Diverted AS DOUBLE) = 0
-      AND TRY_CAST(DepDelay AS DOUBLE) IS NOT NULL
-      AND TRY_CAST(CRSDepTime AS INTEGER) IS NOT NULL
+    WHERE TRY_CAST(CRSDepTime AS INTEGER) IS NOT NULL
       AND Origin IS NOT NULL
       AND Dest IS NOT NULL
 ) TO '{out}' (FORMAT PARQUET)
@@ -42,10 +54,11 @@ COPY (
 
 
 def clean(raw_dir: Path = RAW_DIR, out_path: Path = CLEAN_PATH) -> int:
-    """Write the cleaned parquet file and return the number of flights kept.
+    """Write the cleaned parquet file and return the number of operated flights.
 
-    Cancelled and diverted flights are dropped: they have no departure delay,
-    and predicting cancellations is a different problem with different causes.
+    Cancelled and diverted flights stay in the file (operated = false) so the
+    schedule features see the full published schedule, but they get no label:
+    predicting cancellations is a different problem with different causes.
     """
     files = sorted(raw_dir.glob("*.csv"))
     if not files:
@@ -65,4 +78,4 @@ def clean(raw_dir: Path = RAW_DIR, out_path: Path = CLEAN_PATH) -> int:
             out=str(out_path),
         )
     )
-    return con.execute(f"SELECT count(*) FROM '{out_path}'").fetchone()[0]
+    return con.execute(f"SELECT count(*) FILTER (WHERE operated) FROM '{out_path}'").fetchone()[0]
