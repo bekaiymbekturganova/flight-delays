@@ -40,6 +40,8 @@ DELAY_THRESHOLD_MIN = 15
 
 # Trailing window for historical delay rates, in days.
 HISTORY_DAYS = 28
+# A shorter window that reacts faster when delays rise or fall with the season.
+RECENT_DAYS = 7
 
 # Public airport coordinates (OurAirports, public domain).
 AIRPORTS_URL = "https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv"
@@ -70,6 +72,11 @@ NUMERIC = [
     "route_n",
     "origin_hour_rate",
     "origin_hour_n",
+    # How the last week went: the same idea over 7 days instead of 28, so the
+    # model notices quickly when the whole system starts running late.
+    "origin_7d_rate",
+    "carrier_7d_rate",
+    "nation_7d_rate",
     # Aircraft rotation, from the schedule
     "leg_number",
     "legs_that_day",
@@ -86,7 +93,15 @@ NUMERIC = [
 ]
 FEATURES = CATEGORICAL + NUMERIC
 
-# The first version of the model used only schedule and history. It is kept as
-# a comparison so the report shows what rotation and weather add.
-ADDED = [f for f in NUMERIC if f in ("leg_number", "legs_that_day", "turnaround_min") or f.startswith(("origin_", "dest_")) and f.endswith(("_mm", "_cm", "_kmh", "_c"))]
+# Each version of the model is kept as a comparison, so the report shows what
+# every addition is worth: v1 used schedule and 28-day history, v2 added the
+# aircraft rotation and forecast weather, v3 adds the last-week trend.
+ROTATION_WEATHER = [
+    f for f in NUMERIC
+    if f in ("leg_number", "legs_that_day", "turnaround_min")
+    or f.startswith(("origin_", "dest_")) and f.endswith(("_mm", "_cm", "_kmh", "_c"))
+]
+RECENT = [f for f in NUMERIC if "_7d_" in f]
+ADDED = ROTATION_WEATHER + RECENT
 BASE_FEATURES = [f for f in FEATURES if f not in ADDED]
+V2_FEATURES = [f for f in FEATURES if f not in RECENT]

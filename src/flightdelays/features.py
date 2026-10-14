@@ -13,11 +13,11 @@ from pathlib import Path
 
 import duckdb
 
-from .config import CLEAN_PATH, FEATURES_PATH, HISTORY_DAYS, WEATHER_PATH, WEATHER_VARS
+from .config import CLEAN_PATH, FEATURES_PATH, HISTORY_DAYS, RECENT_DAYS, WEATHER_PATH, WEATHER_VARS
 
 
-def _history_cte(name: str, keys: list[str]) -> str:
-    """Trailing delay rate per key over the HISTORY_DAYS before each date.
+def _history_cte(name: str, keys: list[str], days: int = HISTORY_DAYS) -> str:
+    """Trailing delay rate per key over the `days` before each date.
 
     The window ends one day before the current row, so a flight never sees
     outcomes from its own day.
@@ -35,7 +35,7 @@ def _history_cte(name: str, keys: list[str]) -> str:
         FROM {name}_daily
         WINDOW w AS (
             PARTITION BY {cols} ORDER BY flight_date
-            RANGE BETWEEN INTERVAL {HISTORY_DAYS} DAY PRECEDING
+            RANGE BETWEEN INTERVAL {days} DAY PRECEDING
                       AND INTERVAL 1 DAY PRECEDING
         )
     )"""
@@ -47,10 +47,14 @@ def _join(name: str, keys: list[str]) -> str:
 
 
 HISTORIES = {
-    "origin": ["origin"],
-    "carrier": ["carrier"],
-    "route": ["origin", "dest"],
-    "origin_hour": ["origin", "dep_hour"],
+    "origin": (["origin"], HISTORY_DAYS),
+    "carrier": (["carrier"], HISTORY_DAYS),
+    "route": (["origin", "dest"], HISTORY_DAYS),
+    "origin_hour": (["origin", "dep_hour"], HISTORY_DAYS),
+    # Last week only, so the model reacts quickly to seasonal swings.
+    "origin_7d": (["origin"], RECENT_DAYS),
+    "carrier_7d": (["carrier"], RECENT_DAYS),
+    "nation_7d": (["nation"], RECENT_DAYS),
 }
 
 
@@ -91,8 +95,8 @@ def _weather_sql(weather: str | None) -> tuple[str, str, str]:
 
 
 def build_query(source: str, weather: str | None = None) -> str:
-    ctes = ",".join(_history_cte(n, k) for n, k in HISTORIES.items())
-    joins = "\n".join(_join(n, k) for n, k in HISTORIES.items())
+    ctes = ",".join(_history_cte(n, k, days) for n, (k, days) in HISTORIES.items())
+    joins = "\n".join(_join(n, k) for n, (k, _) in HISTORIES.items())
     weather_cte, weather_joins, weather_cols = _weather_sql(weather)
     history_cols = ",\n        ".join(
         f"{n}.{n}_rate, {n}.{n}_n" for n in HISTORIES
@@ -102,7 +106,7 @@ def build_query(source: str, weather: str | None = None) -> str:
         -- Scheduled traffic is published in advance, so it is fair to use. It is
         -- counted here, before the WHERE at the bottom, because SQL applies WHERE
         -- before window functions: counting later would skip cancelled flights.
-        SELECT *,
+        SELECT *, 'US' AS nation,
             count(*) OVER (PARTITION BY origin, flight_date) AS origin_day_flights,
             count(*) OVER (PARTITION BY origin, flight_date, dep_hour) AS origin_hour_flights
         FROM '{source}'

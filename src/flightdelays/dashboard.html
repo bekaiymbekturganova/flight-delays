@@ -5,147 +5,215 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Flight delay risk</title>
 <style>
-:root{--bg:#f5f6f9;--surface:#fff;--ink:#0e1a33;--muted:#465069;--line:#d3d8e3;--obs:#0e1a33;--pred:#b3264a;--soft:#e9ecf3}
-@media (prefers-color-scheme:dark){:root{--bg:#0a1122;--surface:#111b31;--ink:#eceef4;--muted:#9aa5bd;--line:#26324d;--obs:#c9d4ee;--pred:#f08aa2;--soft:#1a2540}}
+:root{--bg:#f5f6f9;--surface:#fff;--ink:#0e1a33;--muted:#4a5470;--line:#d8dce6;--obs:#0e1a33;--pred:#b3264a;--soft:#eceff5;--accent-bg:#fbeef1}
+@media (prefers-color-scheme:dark){:root{--bg:#0a1122;--surface:#111b31;--ink:#eceef4;--muted:#a3adc4;--line:#26324d;--obs:#c9d4ee;--pred:#f08aa2;--soft:#1a2540;--accent-bg:#2a1622}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;padding:28px 20px 64px}
-main{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
-h1{font-size:clamp(1.8rem,5vw,2.6rem);line-height:1.1;margin:0;letter-spacing:-.02em}
-h2{font-size:1.1rem;margin:0}
-p{margin:0}.muted{color:var(--muted)}.lede{max-width:68ch;margin-top:8px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;padding:32px 16px 72px}
+main{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:36px}
+h1{font-size:clamp(1.9rem,5vw,2.7rem);line-height:1.1;margin:0;letter-spacing:-.02em}
+h2{font-size:1.35rem;margin:0;letter-spacing:-.01em}
+h3{font-size:1rem;margin:0}
+p{margin:0}.muted{color:var(--muted)}.small{font-size:.88rem}
+.lede{max-width:64ch;margin-top:10px;font-size:1.08rem}
 a{color:var(--pred)}
-.filters{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px}
-.filters label{display:flex;flex-direction:column;gap:4px;font-size:.8rem;font-weight:600;color:var(--muted);min-width:0}
-select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;width:100%}
-select:focus-visible,button:focus-visible,tr:focus-visible{outline:2px solid var(--pred);outline-offset:2px}
-.reset{grid-column:1/-1;justify-self:start;font:inherit;font-size:.9rem;background:none;border:0;color:var(--pred);padding:0;cursor:pointer;text-decoration:underline}
-.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.tile{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:4px;min-width:0}
-.tile b{font-size:1.9rem;line-height:1.1;font-variant-numeric:tabular-nums}
-.tile span{font-size:.85rem;color:var(--muted)}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.legend{display:flex;gap:18px;font-size:.85rem;color:var(--muted);flex-wrap:wrap}
-.key{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+section{display:flex;flex-direction:column;gap:14px}
+.sec-head{display:flex;flex-direction:column;gap:4px}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.take b{display:block;font-size:2.1rem;line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.take p{color:var(--muted)}
+.filters{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.filters label{display:flex;flex-direction:column;gap:4px;font-size:.82rem;font-weight:600;color:var(--muted);min-width:0}
+select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px;width:100%}
+select:focus-visible,button:focus-visible,tr:focus-visible,summary:focus-visible{outline:2px solid var(--pred);outline-offset:2px}
+.reset{align-self:flex-start;font:inherit;font-size:.9rem;background:none;border:0;color:var(--pred);padding:0;cursor:pointer;text-decoration:underline}
+.answer{display:grid;grid-template-columns:auto 1fr;gap:6px 22px;align-items:center;background:var(--accent-bg);border-radius:10px;padding:18px 20px}
+.answer .big{font-size:3rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;color:var(--pred)}
+.answer .what{font-size:1.05rem}
+.legend{display:flex;gap:18px;font-size:.85rem;color:var(--muted);flex-wrap:wrap;align-items:center}
+.key{display:inline-block;width:16px;height:10px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.key.tick{width:3px;height:14px;border-radius:1px}
 svg{display:block;width:100%;height:auto}
-svg text{fill:var(--muted);font-size:11px}
+svg text{fill:var(--muted);font-size:12px}
 .scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.95rem}
-th,td{text-align:right;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th,td{text-align:right;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
 th{font-size:.78rem;color:var(--muted);font-weight:600}
+td .sub{display:block;font-size:.78rem;color:var(--muted)}
 tbody tr.pick{cursor:pointer}tbody tr.pick:hover{background:var(--soft)}
-td.bar{text-align:left;width:40%}
-.track{position:relative;height:14px;background:var(--soft);border-radius:3px;min-width:80px}
-.fill{position:absolute;left:0;top:0;bottom:0;background:var(--pred);border-radius:3px;opacity:.85}
-.tick{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--obs)}
+tr.on td{font-weight:700}
+td.bar{text-align:left;width:42%}
+.track{position:relative;height:14px;background:var(--soft);border-radius:4px;min-width:80px}
+.fill{position:absolute;left:0;top:0;bottom:0;background:var(--pred);border-radius:0 4px 4px 0;opacity:.88}
+.tickm{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:1px;background:var(--obs)}
 .empty{padding:24px;text-align:center;color:var(--muted)}
+.grid3{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ladder{display:flex;flex-direction:column;gap:12px}
+.rung{display:grid;grid-template-columns:minmax(150px,38%) 1fr 56px;gap:12px;align-items:center}
+.rung .lbl b{display:block;font-size:.95rem}.rung .lbl span{font-size:.82rem;color:var(--muted)}
+.rung .val{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+.rung.best .fill{opacity:1}
+.miss{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.miss li{border-left:3px solid var(--pred);padding:2px 0 2px 12px}
+details.tech{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0 20px}
+details.tech>summary{cursor:pointer;padding:16px 0;font-weight:700;font-size:1.05rem}
+details.tech[open]>summary{border-bottom:1px solid var(--line);margin-bottom:16px}
+.tech-body{display:flex;flex-direction:column;gap:22px;padding-bottom:20px}
+.tech-body h3{margin-bottom:4px}
+details.more>summary{cursor:pointer;color:var(--pred);font-size:.9rem;margin-top:6px}
 tr.best td{font-weight:700}
-@media (max-width:760px){.filters,.tiles{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}}
+@media (max-width:760px){.cards,.grid3{grid-template-columns:1fr}.filters{grid-template-columns:1fr 1fr}.answer{grid-template-columns:1fr}.rung{grid-template-columns:1fr 56px}.rung .lbl{grid-column:1/-1}}
 </style>
 </head>
 <body>
 <main>
 <header>
-  <h1>Will this flight leave late?</h1>
+  <h1>Will your flight leave late?</h1>
   <p class="lede muted" id="intro">Loading results…</p>
 </header>
 
-<section class="filters" aria-label="Filters">
-  <label>Day<select id="f-day"></select></label>
-  <label>Departure airport<select id="f-origin"></select></label>
-  <label>Airline<select id="f-carrier"></select></label>
-  <label>Time of day<select id="f-part"></select></label>
-  <button class="reset" id="reset" type="button">Clear filters</button>
+<section aria-labelledby="h-short">
+  <div class="sec-head"><h2 id="h-short">The short version</h2></div>
+  <div class="cards" id="takeaways"></div>
 </section>
 
-<section class="tiles" aria-live="polite">
-  <div class="tile"><b id="t-n">–</b><span>flights in this selection</span></div>
-  <div class="tile"><b id="t-pred">–</b><span>predicted to leave 15+ min late</span></div>
-  <div class="tile"><b id="t-obs">–</b><span>actually left 15+ min late</span></div>
-  <div class="tile"><b id="t-gap">–</b><span>prediction minus actual</span></div>
-</section>
-
-<section class="card">
-  <h2>Day by day: predicted and actual delay rate</h2>
-  <div class="legend"><span><i class="key" style="background:var(--pred)"></i>Predicted the day before</span><span><i class="key" style="background:var(--obs)"></i>Actual</span><span>Click a day to select it</span></div>
-  <div id="chart"></div>
-</section>
-
-<div class="grid2">
-  <section class="card">
-    <h2>Airports, riskiest first</h2>
-    <p class="muted" style="font-size:.85rem">Bar: predicted delay rate. Dark tick: actual. Click a row to filter.</p>
-    <div class="scroll"><table><thead><tr><th>Airport</th><th style="text-align:left">Predicted vs actual</th><th>Pred.</th><th>Actual</th><th>Flights</th></tr></thead><tbody id="tb-origin"></tbody></table></div>
-  </section>
-  <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
-    <section class="card">
-      <h2>Time of day</h2>
-      <div class="scroll"><table><thead><tr><th>Scheduled departure</th><th style="text-align:left">Predicted vs actual</th><th>Pred.</th><th>Actual</th><th>Flights</th></tr></thead><tbody id="tb-part"></tbody></table></div>
-    </section>
-    <section class="card">
-      <h2>Airlines</h2>
-      <div class="scroll"><table><thead><tr><th>Carrier code</th><th style="text-align:left">Predicted vs actual</th><th>Pred.</th><th>Actual</th><th>Flights</th></tr></thead><tbody id="tb-carrier"></tbody></table></div>
-    </section>
+<section aria-labelledby="h-check">
+  <div class="sec-head">
+    <h2 id="h-check">Check a flight</h2>
+    <p class="muted small">Pick an airport, airline or time of day. The numbers come from real flights in the test period, which the model never saw while learning.</p>
   </div>
-</div>
-
-<section class="card">
-  <h2>Where the model misses</h2>
-  <p class="muted" style="font-size:.85rem">These views ignore the filters above and cover the whole test period. A gap above zero means more flights left late than the model expected.</p>
-  <h3 style="font-size:1rem;margin:4px 0 0">Days it underestimated most</h3>
-  <div class="scroll"><table><thead><tr><th>Day</th><th>Pred.</th><th>Actual</th><th>Gap</th><th style="text-align:left">Airport with the most unexpected delays</th></tr></thead><tbody id="tb-days"></tbody></table></div>
-  <div class="grid2" style="margin-top:6px">
-    <div style="min-width:0"><h3 style="font-size:1rem;margin:0 0 6px">Airports with the largest gap</h3>
-    <div class="scroll"><table><thead><tr><th>Airport</th><th>Pred.</th><th>Actual</th><th>Gap</th></tr></thead><tbody id="tb-gap-origin"></tbody></table></div></div>
-    <div style="min-width:0"><h3 style="font-size:1rem;margin:0 0 6px">Airlines with the largest gap</h3>
-    <div class="scroll"><table><thead><tr><th>Airline</th><th>Pred.</th><th>Actual</th><th>Gap</th></tr></thead><tbody id="tb-gap-carrier"></tbody></table></div></div>
+  <div class="card">
+    <div class="filters" aria-label="Filters">
+      <label>Departure airport<select id="f-origin"></select></label>
+      <label>Airline<select id="f-carrier"></select></label>
+      <label>Time of day<select id="f-part"></select></label>
+      <label>Day<select id="f-day"></select></label>
+    </div>
+    <button class="reset" id="reset" type="button">Clear choices</button>
+    <div class="answer" aria-live="polite">
+      <div class="big" id="a-obs">–</div>
+      <div class="what" id="a-text">–</div>
+    </div>
+    <h3 style="margin-top:6px">Day by day</h3>
+    <div class="legend"><span><i class="key" style="background:var(--pred);height:3px"></i>Model's forecast, made the day before</span><span><i class="key" style="background:var(--obs);height:3px"></i>What actually happened</span><span>Click a day to look at it</span></div>
+    <div id="chart"></div>
   </div>
 </section>
 
-<section class="card">
-  <h2>What the model relies on</h2>
-  <p class="muted" style="font-size:.85rem">Share of the gradient-boosting model's total split gain, top 10 inputs.</p>
-  <div class="scroll"><table><tbody id="tb-imp"></tbody></table></div>
+<section aria-labelledby="h-when">
+  <div class="sec-head">
+    <h2 id="h-when">When and where delays happen</h2>
+    <div class="legend"><span><i class="key" style="background:var(--pred)"></i>Forecast</span><span><i class="key tick" style="background:var(--obs)"></i>Actual</span><span>Click a row to check it above</span></div>
+  </div>
+  <div class="grid3">
+    <div class="card"><h3>Time of day</h3><div class="scroll"><table><tbody id="tb-part"></tbody></table></div></div>
+    <div class="card"><h3>Airlines</h3><div class="scroll"><table><tbody id="tb-carrier"></tbody></table></div></div>
+  </div>
+  <div class="card"><h3>Airports, most delays first</h3>
+    <div class="scroll"><table><tbody id="tb-origin"></tbody></table></div>
+    <details class="more" id="more-origin"><summary>Show all airports</summary><div class="scroll"><table><tbody id="tb-origin-rest"></tbody></table></div></details>
+  </div>
 </section>
 
-<section class="card">
-  <h2>How good is the model?</h2>
-  <p class="muted" id="split"></p>
-  <div class="scroll"><table><thead><tr><th>Model</th><th>PR-AUC</th><th>ROC-AUC</th><th>Brier</th></tr></thead><tbody id="tb-models"></tbody></table></div>
-  <p class="muted" style="font-size:.85rem" id="note"></p>
-  <h2 style="margin-top:8px">Are the probabilities honest?</h2>
-  <p class="muted" style="font-size:.85rem">Test flights sorted by predicted risk and cut into ten equal groups.</p>
-  <div class="scroll"><table><thead><tr><th>Group</th><th style="text-align:left">Predicted vs actual</th><th>Pred.</th><th>Actual</th><th>Flights</th></tr></thead><tbody id="tb-calib"></tbody></table></div>
+<section aria-labelledby="h-better">
+  <div class="sec-head">
+    <h2 id="h-better">How the model got better</h2>
+    <p class="muted small" id="ladder-note"></p>
+  </div>
+  <div class="card"><div class="ladder" id="ladder"></div></div>
 </section>
 
-<footer class="muted" style="font-size:.9rem">
-  Data: US Bureau of Transportation Statistics, Reporting Carrier On-Time Performance.
+<section aria-labelledby="h-miss">
+  <div class="sec-head">
+    <h2 id="h-miss">Where it gets it wrong</h2>
+    <p class="muted small">The days the model most underestimated. These are usually storms or system problems that no schedule can see a day ahead.</p>
+  </div>
+  <div class="card"><ul class="miss" id="miss-list"></ul></div>
+</section>
+
+<details class="tech">
+  <summary>For data scientists: metrics, calibration and feature importance</summary>
+  <div class="tech-body">
+    <div><h3>Test-set scores</h3><p class="muted small" id="split"></p>
+      <div class="scroll"><table><thead><tr><th>Model</th><th>PR-AUC</th><th>ROC-AUC</th><th>Brier</th></tr></thead><tbody id="tb-models"></tbody></table></div>
+      <p class="muted small" id="note"></p></div>
+    <div><h3>Are the probabilities honest?</h3><p class="muted small">Test flights sorted by predicted risk and cut into ten equal groups. Bar: forecast. Tick: actual.</p>
+      <div class="scroll"><table><thead><tr><th>Group</th><th style="text-align:left">Forecast vs actual</th><th>Forecast</th><th>Actual</th><th>Flights</th></tr></thead><tbody id="tb-calib"></tbody></table></div></div>
+    <div><h3>What the model relies on</h3><p class="muted small">Share of the final model's total split gain, top 10 inputs.</p>
+      <div class="scroll"><table><tbody id="tb-imp"></tbody></table></div></div>
+    <div class="grid3">
+      <div><h3>Airports with the largest gap</h3><div class="scroll"><table><thead><tr><th>Airport</th><th>Forecast</th><th>Actual</th><th>Gap</th></tr></thead><tbody id="tb-gap-origin"></tbody></table></div></div>
+      <div><h3>Airlines with the largest gap</h3><div class="scroll"><table><thead><tr><th>Airline</th><th>Forecast</th><th>Actual</th><th>Gap</th></tr></thead><tbody id="tb-gap-carrier"></tbody></table></div></div>
+    </div>
+  </div>
+</details>
+
+<footer class="muted small">
+  Data: US Bureau of Transportation Statistics on-time data and Open-Meteo forecast archive. A flight counts as late when it leaves the gate 15 or more minutes after schedule.
   Code: <a href="https://github.com/bekaiymbekturganova/flight-delays">github.com/bekaiymbekturganova/flight-delays</a>
 </footer>
 </main>
 
 <script>
-const LABELS = {route_history: "Route's 28-day delay rate", logistic_regression: "Logistic regression", gradient_boosting_base: "Gradient boosting, schedule and history only", gradient_boosting: "Gradient boosting + aircraft rotation + weather"};
+// Plain-language names for codes in the data.
+const AIRLINES = {AA:"American",AS:"Alaska",B6:"JetBlue",DL:"Delta",F9:"Frontier",G4:"Allegiant",HA:"Hawaiian",MQ:"Envoy (American Eagle)",NK:"Spirit",OH:"PSA (American Eagle)",OO:"SkyWest",UA:"United",WN:"Southwest",YX:"Republic",QX:"Horizon",ZW:"Air Wisconsin","9E":"Endeavor (Delta Connection)"};
+const AIRPORTS = {ATL:"Atlanta",AUS:"Austin",BNA:"Nashville",BOS:"Boston",BWI:"Baltimore",CLT:"Charlotte",DAL:"Dallas Love Field",DCA:"Washington Reagan",DEN:"Denver",DFW:"Dallas/Fort Worth",DTW:"Detroit",EWR:"Newark",FLL:"Fort Lauderdale",HOU:"Houston Hobby",IAD:"Washington Dulles",IAH:"Houston Bush",JFK:"New York JFK",LAS:"Las Vegas",LAX:"Los Angeles",LGA:"New York LaGuardia",MCI:"Kansas City",MCO:"Orlando",MDW:"Chicago Midway",MIA:"Miami",MSP:"Minneapolis",MSY:"New Orleans",OAK:"Oakland",ORD:"Chicago O'Hare",PDX:"Portland",PHL:"Philadelphia",PHX:"Phoenix",RDU:"Raleigh-Durham",SAN:"San Diego",SAT:"San Antonio",SEA:"Seattle",SFO:"San Francisco",SJC:"San Jose",SLC:"Salt Lake City",SMF:"Sacramento",SNA:"Orange County",STL:"St. Louis",TPA:"Tampa"};
+const airline = c => AIRLINES[c] ? `${AIRLINES[c]} (${c})` : c;
+const airport = c => AIRPORTS[c] ? `${AIRPORTS[c]} (${c})` : c;
+const PARTS_SHORT = ["morning","midday","evening","night"];
+
+const LADDER = [
+  ["route_history", "Simple rule", "How often this route ran late in the last 4 weeks"],
+  ["logistic_regression", "Basic statistical model", "Schedule and history, straight-line model"],
+  ["gradient_boosting_base", "Version 1", "Schedule and 4-week delay history"],
+  ["gradient_boosting_v2", "Version 2", "+ the plane's daily schedule and the weather forecast"],
+  ["gradient_boosting", "Version 3", "+ how the last week went, to catch seasonal swings"],
+];
+const LABELS = Object.fromEntries(LADDER.map(([k, a, b]) => [k, `${a}: ${b}`]));
+
+const FEATURE_NAMES = {
+  origin_hour_rate: "Delay rate at this airport and hour, last 28 days", dep_hour: "Scheduled departure hour",
+  origin: "Departure airport", dest: "Destination airport", carrier: "Airline", day_of_week: "Day of week", month: "Month",
+  carrier_rate: "Airline delay rate, last 28 days", carrier_n: "Airline flights, last 28 days", route_rate: "Route delay rate, last 28 days",
+  route_n: "Route flights, last 28 days", origin_rate: "Airport delay rate, last 28 days", origin_n: "Airport flights, last 28 days",
+  origin_hour_n: "Airport-hour flights, last 28 days", origin_day_flights: "Departures scheduled at the airport that day",
+  origin_hour_flights: "Departures scheduled at the airport that hour", distance: "Distance", crs_elapsed: "Scheduled flight time",
+  leg_number: "Which flight of the day this is for the plane", legs_that_day: "Flights this plane makes that day", turnaround_min: "Planned minutes between the plane's flights",
+  origin_7d_rate: "Airport delay rate, last 7 days", carrier_7d_rate: "Airline delay rate, last 7 days", nation_7d_rate: "US-wide delay rate, last 7 days",
+  origin_precip_mm: "Rain forecast at departure", origin_snow_cm: "Snow forecast at departure", origin_gust_kmh: "Wind gusts forecast at departure", origin_temp_min_c: "Low temperature at departure",
+  dest_precip_mm: "Rain forecast at arrival", dest_snow_cm: "Snow forecast at arrival", dest_gust_kmh: "Wind gusts forecast at arrival", dest_temp_min_c: "Low temperature at arrival"
+};
+// What each strong signal means, for the takeaway card.
+const WHY = {
+  turnaround_min: ["Tight turnarounds", "The strongest new clue is how many minutes the plane has between flights. A tight turnaround leaves no room to absorb a delay."],
+  leg_number: ["Late in the plane's day", "The strongest new clue is how many flights the plane has already made that day. Delays pile up as the day goes on."],
+  legs_that_day: ["Busy planes", "The strongest new clue is how many flights the plane makes that day."],
+  nation_7d_rate: ["Last week's trend", "The strongest new clue is how the whole US network ran over the last week."],
+  origin_7d_rate: ["Last week's trend", "The strongest new clue is how the departure airport ran over the last week."],
+  origin_precip_mm: ["Rain", "The strongest new clue is the rain forecast at the departure airport."],
+  dep_hour: ["Time of day", "The strongest clue is the departure hour. Delays pile up as the day goes on."]
+};
+
 const $ = id => document.getElementById(id);
 const pct = x => isFinite(x) ? (100 * x).toFixed(1) + "%" : "–";
+const pct0 = x => isFinite(x) ? Math.round(100 * x) + "%" : "–";
 const num = x => x.toLocaleString("en-US");
 const state = {day: -1, origin: -1, carrier: -1, part: -1};
 const DIMS = ["day", "origin", "carrier", "part"];
-let cube, metrics;
+let cube, metrics, overall;
 
-function niceDate(s) {
-  const d = new Date(s + "T00:00:00");
-  return d.toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric", year: "numeric"});
+function niceDate(s, opts = {weekday: "short", month: "short", day: "numeric"}) {
+  return new Date(s + "T00:00:00").toLocaleDateString("en-US", opts);
 }
 
-// Sum flights, late flights and predicted probability, grouped by one dimension,
+// Sum flights, late flights and predicted probability by one dimension,
 // applying every filter except the ones listed in `ignore`.
-function aggregate(by, ignore = []) {
+function aggregate(by, ignore = [], useFilters = true) {
   const out = new Map();
   for (const r of cube.rows) {
     let keep = true;
-    for (let i = 0; i < 4; i++) {
+    if (useFilters) for (let i = 0; i < 4; i++) {
       const dim = DIMS[i];
       if (state[dim] !== -1 && !ignore.includes(dim) && r[i] !== state[dim]) { keep = false; break; }
     }
@@ -160,138 +228,176 @@ function aggregate(by, ignore = []) {
 
 function barCell(pred, obs, scale) {
   const w = Math.min(100, 100 * pred / scale), t = Math.min(100, 100 * obs / scale);
-  return `<td class="bar"><div class="track"><div class="fill" style="width:${w}%"></div><div class="tick" style="left:calc(${t}% - 1px)"></div></div></td>`;
+  return `<td class="bar"><div class="track" title="Forecast ${pct(pred)}, actual ${pct(obs)}"><div class="fill" style="width:${w}%"></div><div class="tickm" style="left:calc(${t}% - 1.5px)"></div></div></td>`;
 }
 
-function fillTable(id, dim, names, sortByRisk) {
+function rows(dim, names, fmt, order) {
   const agg = aggregate(dim, [dim]);
-  let items = [...agg.entries()].map(([k, a]) => ({k, name: names[k], n: a.n, pred: a.p / a.n, obs: a.late / a.n}));
-  if (sortByRisk) items.sort((a, b) => b.pred - a.pred); else items.sort((a, b) => a.k - b.k);
+  let items = [...agg.entries()].map(([k, a]) => ({k, name: fmt(names[k]), n: a.n, pred: a.p / a.n, obs: a.late / a.n}));
+  if (order === "risk") items.sort((a, b) => b.obs - a.obs); else items.sort((a, b) => a.k - b.k);
+  return items;
+}
+
+function rowHtml(dim, i, scale) {
+  return `<tr class="pick${state[dim] === i.k ? " on" : ""}" tabindex="0" data-dim="${dim}" data-k="${i.k}"><td>${i.name}<span class="sub">${num(i.n)} flights</span></td>${barCell(i.pred, i.obs, scale)}<td>${pct0(i.obs)}<span class="sub">late</span></td></tr>`;
+}
+
+function fillTable(id, dim, names, fmt, order, limit, restId) {
+  const items = rows(dim, names, fmt, order);
   const scale = Math.max(0.05, ...items.map(i => Math.max(i.pred, i.obs))) * 1.05;
-  $(id).innerHTML = items.length ? items.map(i =>
-    `<tr class="pick" tabindex="0" data-dim="${dim}" data-k="${i.k}"${state[dim] === i.k ? ' style="font-weight:700"' : ""}><td>${i.name}</td>${barCell(i.pred, i.obs, scale)}<td>${pct(i.pred)}</td><td>${pct(i.obs)}</td><td>${num(i.n)}</td></tr>`
-  ).join("") : `<tr><td colspan="5" class="empty">No flights match these filters.</td></tr>`;
+  const head = limit ? items.slice(0, limit) : items, rest = limit ? items.slice(limit) : [];
+  $(id).innerHTML = head.length ? head.map(i => rowHtml(dim, i, scale)).join("") : `<tr><td colspan="3" class="empty">No flights match these choices.</td></tr>`;
+  if (restId) { $(restId).innerHTML = rest.map(i => rowHtml(dim, i, scale)).join(""); $("more-origin").hidden = !rest.length; }
 }
 
 function drawChart() {
   const agg = aggregate("day", ["day"]);
   const pts = cube.dates.map((d, i) => { const a = agg.get(i); return a ? {i, pred: a.p / a.n, obs: a.late / a.n, n: a.n} : null; });
   const have = pts.filter(Boolean);
-  if (!have.length) { $("chart").innerHTML = `<div class="empty">No flights match these filters.</div>`; return; }
-  const W = 1000, H = 300, L = 44, R = 16, T = 12, B = 30;
-  const top = Math.max(0.1, Math.ceil(Math.max(...have.map(p => Math.max(p.pred, p.obs))) * 20) / 20);
+  if (!have.length) { $("chart").innerHTML = `<div class="empty">No flights match these choices.</div>`; return; }
+  const W = 1000, H = 280, L = 44, R = 16, T = 12, B = 30;
+  const top = Math.max(0.1, Math.ceil(Math.max(...have.map(p => Math.max(p.pred, p.obs))) * 10) / 10);
   const n = cube.dates.length;
   const x = i => L + (n === 1 ? (W - L - R) / 2 : i * (W - L - R) / (n - 1));
   const y = v => T + (1 - v / top) * (H - T - B);
   const path = key => have.map((p, j) => `${j ? "L" : "M"}${x(p.i).toFixed(1)},${y(p[key]).toFixed(1)}`).join("");
   let g = "";
-  const steps = top <= 0.2 ? 0.05 : 0.1;
-  for (let v = 0; v <= top + 1e-9; v += steps)
+  const step = top <= 0.3 ? 0.1 : 0.2;
+  for (let v = 0; v <= top + 1e-9; v += step)
     g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${Math.round(v * 100)}%</text>`;
-  const every = Math.max(1, Math.ceil(n / 8));
-  cube.dates.forEach((d, i) => { if (i % every === 0) g += `<text x="${x(i)}" y="${H - 8}" text-anchor="${i === 0 ? "start" : "middle"}">${d.slice(5)}</text>`; });
+  const every = Math.max(1, Math.ceil(n / 7));
+  cube.dates.forEach((d, i) => { if (i % every === 0) g += `<text x="${x(i)}" y="${H - 8}" text-anchor="${i === 0 ? "start" : i > n - every ? "end" : "middle"}">${niceDate(d, {month: "short", day: "numeric"})}</text>`; });
   if (state.day !== -1) g += `<line x1="${x(state.day)}" x2="${x(state.day)}" y1="${T}" y2="${H - B}" stroke="var(--muted)" stroke-dasharray="4 3"/>`;
   g += `<path d="${path("obs")}" fill="none" stroke="var(--obs)" stroke-width="2"/><path d="${path("pred")}" fill="none" stroke="var(--pred)" stroke-width="2"/>`;
   const band = n === 1 ? W - L - R : (W - L - R) / (n - 1);
   have.forEach(p => {
-    g += `<circle cx="${x(p.i)}" cy="${y(p.obs)}" r="2.5" fill="var(--obs)"/><circle cx="${x(p.i)}" cy="${y(p.pred)}" r="2.5" fill="var(--pred)"/>`;
-    g += `<rect x="${x(p.i) - band / 2}" y="${T}" width="${band}" height="${H - T - B}" fill="transparent" style="cursor:pointer" data-day="${p.i}"><title>${niceDate(cube.dates[p.i])}: predicted ${pct(p.pred)}, actual ${pct(p.obs)}, ${num(p.n)} flights</title></rect>`;
+    g += `<rect x="${x(p.i) - band / 2}" y="${T}" width="${band}" height="${H - T - B}" fill="transparent" style="cursor:pointer" data-day="${p.i}"><title>${niceDate(cube.dates[p.i])}: forecast ${pct(p.pred)}, actual ${pct(p.obs)} of ${num(p.n)} flights</title></rect>`;
   });
-  $("chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Predicted and actual delay rate by day">${g}</svg>`;
+  $("chart").innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Forecast and actual share of late flights by day">${g}</svg>`;
 }
 
+function describeSelection() {
+  const bits = [];
+  if (state.carrier !== -1) bits.push(airline(cube.carriers[state.carrier]));
+  bits.push("flights");
+  if (state.origin !== -1) bits.push("from " + airport(cube.origins[state.origin]));
+  if (state.part !== -1) bits.push("in the " + PARTS_SHORT[state.part]);
+  if (state.day !== -1) bits.push("on " + niceDate(cube.dates[state.day], {weekday: "long", month: "long", day: "numeric"}));
+  return bits.join(" ");
+}
 
-const FEATURE_NAMES = {
-  origin_hour_rate: "Delay rate at this airport and hour, last 28 days", dep_hour: "Scheduled departure hour",
-  origin: "Departure airport", dest: "Destination airport", carrier: "Airline", day_of_week: "Day of week", month: "Month",
-  carrier_rate: "Airline delay rate, last 28 days", carrier_n: "Airline flights, last 28 days", route_rate: "Route delay rate, last 28 days",
-  route_n: "Route flights, last 28 days", origin_rate: "Airport delay rate, last 28 days", origin_n: "Airport flights, last 28 days",
-  origin_hour_n: "Airport-hour flights, last 28 days", origin_day_flights: "Departures scheduled at the airport that day",
-  origin_hour_flights: "Departures scheduled at the airport that hour", distance: "Distance", crs_elapsed: "Scheduled flight time",
-  leg_number: "Which leg of the day for this aircraft", legs_that_day: "Legs this aircraft flies that day", turnaround_min: "Planned turnaround, minutes",
-  origin_precip_mm: "Precipitation at origin", origin_snow_cm: "Snowfall at origin", origin_gust_kmh: "Wind gusts at origin", origin_temp_min_c: "Minimum temperature at origin",
-  dest_precip_mm: "Precipitation at destination", dest_snow_cm: "Snowfall at destination", dest_gust_kmh: "Wind gusts at destination", dest_temp_min_c: "Minimum temperature at destination"
-};
-const gapText = g => (g > 0 ? "+" : "") + (100 * g).toFixed(1) + " pts";
+function render() {
+  const all = aggregate(null).get(0) || {n: 0, late: 0, p: 0};
+  if (!all.n) { $("a-obs").textContent = "–"; $("a-text").textContent = "No flights match these choices."; }
+  else {
+    const obs = all.late / all.n, pred = all.p / all.n, avg = overall.late / overall.n, ratio = obs / avg;
+    const vs = Math.abs(ratio - 1) < 0.1 ? "about the same as the average flight" : ratio > 1 ? `${ratio.toFixed(1)}× the average flight (${pct0(avg)})` : `lower than the average flight (${pct0(avg)})`;
+    const sel = DIMS.every(d => state[d] === -1) ? "of all test flights" : `of ${describeSelection()}`;
+    $("a-obs").textContent = pct0(obs);
+    $("a-text").innerHTML = `<strong>${pct0(obs)} ${sel} left 15+ minutes late</strong> — ${vs}.<br><span class="muted">The model expected ${pct0(pred)}, based on ${num(all.n)} flights.</span>`;
+  }
+  drawChart();
+  fillTable("tb-part", "part", cube.parts, s => s, "order");
+  fillTable("tb-carrier", "carrier", cube.carriers, airline, "risk");
+  fillTable("tb-origin", "origin", cube.origins, airport, "risk", 10, "tb-origin-rest");
+  for (const dim of DIMS) $("f-" + dim).value = String(state[dim]);
+}
 
-// Error analysis over the whole test period, independent of the filters.
-function renderMisses() {
-  const byDay = new Map(), byDayOrigin = new Map(), byOrigin = new Map(), byCarrier = new Map();
+function setFilter(dim, k) { state[dim] = state[dim] === k ? -1 : k; render(); document.getElementById("h-check").scrollIntoView({behavior: "smooth", block: "start"}); }
+
+function takeaways() {
+  const cal = metrics.calibration, lateIn = c => c.observed * c.flights;
+  const totalLate = cal.reduce((s, c) => s + lateIn(c), 0);
+  const top2 = lateIn(cal[cal.length - 1]) + lateIn(cal[cal.length - 2]);
+  const catchShare = top2 / totalLate;
+  const parts = aggregate("part", [], false), rate = k => { const a = parts.get(k); return a ? a.late / a.n : NaN; };
+  const lo = [...parts.keys()].reduce((a, b) => rate(a) <= rate(b) ? a : b), hi = [...parts.keys()].reduce((a, b) => rate(a) >= rate(b) ? a : b);
+  const sig = (metrics.importance || []).find(f => WHY[f.feature]);
+  const res = metrics.test_metrics, first = res.route_history, last = res.gradient_boosting;
+  const cards = [
+    [`${(catchShare * 10).toFixed(0)} in 10`, `late flights were among the 20% of flights the model rated riskiest. Picking flights at random would catch only 2 in 10.`],
+    [`${(rate(hi) / rate(lo)).toFixed(1)}×`, `${PARTS_SHORT[hi][0].toUpperCase() + PARTS_SHORT[hi].slice(1)} flights left late ${(rate(hi) / rate(lo)).toFixed(1)} times as often as ${PARTS_SHORT[lo]} flights (${pct0(rate(hi))} vs ${pct0(rate(lo))}).${lo === 0 ? " The earliest flight of the day is the safest bet." : ""}`],
+    sig ? WHY[sig.feature] : ["History", "Recent delay history at the airport is the strongest clue."],
+    [`${first.pr_auc.toFixed(2)} → ${last.pr_auc.toFixed(2)}`, `Score went from a simple rule to the final model (PR-AUC, higher is better; random guessing scores ${metrics.data.test_delay_rate.toFixed(2)}). See how each step helped below.`],
+  ];
+  $("takeaways").innerHTML = cards.map(([b, p]) => `<div class="card take"><b>${b}</b><p>${p}</p></div>`).join("");
+}
+
+function ladder() {
+  const res = metrics.test_metrics, items = LADDER.filter(([k]) => res[k]);
+  const top = Math.max(...items.map(([k]) => res[k].pr_auc)), lo = metrics.data.test_delay_rate;
+  const scale = v => 100 * (v - lo * 0.8) / (top - lo * 0.8);
+  $("ladder").innerHTML = items.map(([k, a, b]) =>
+    `<div class="rung${res[k].pr_auc === top ? " best" : ""}"><div class="lbl"><b>${a}</b><span>${b}</span></div><div class="track" title="PR-AUC ${res[k].pr_auc.toFixed(3)}"><div class="fill" style="width:${Math.max(2, scale(res[k].pr_auc))}%"></div></div><div class="val">${res[k].pr_auc.toFixed(2)}</div></div>`).join("");
+  $("ladder-note").textContent = `Score: PR-AUC, which measures how well the model puts late flights ahead of on-time ones. Random guessing scores ${lo.toFixed(2)}, a perfect model 1.00. All scored on the same ${num(metrics.data.test.flights)} test flights.`;
+}
+
+function misses() {
+  const byDay = new Map(), byDayOrigin = new Map();
   const add = (m, k, r) => { const a = m.get(k) || {n: 0, late: 0, p: 0}; a.n += r[4]; a.late += r[5]; a.p += r[6]; m.set(k, a); };
-  for (const r of cube.rows) { add(byDay, r[0], r); add(byDayOrigin, r[0] + "|" + r[1], r); add(byOrigin, r[1], r); add(byCarrier, r[2], r); }
-  const days = [...byDay.entries()].map(([k, a]) => ({k, pred: a.p / a.n, obs: a.late / a.n})).sort((a, b) => (b.obs - b.pred) - (a.obs - a.pred)).slice(0, 5);
-  $("tb-days").innerHTML = days.map(d => {
+  for (const r of cube.rows) { add(byDay, r[0], r); add(byDayOrigin, r[0] + "|" + r[1], r); }
+  const days = [...byDay.entries()].map(([k, a]) => ({k, pred: a.p / a.n, obs: a.late / a.n})).sort((a, b) => (b.obs - b.pred) - (a.obs - a.pred)).slice(0, 4);
+  $("miss-list").innerHTML = days.map(d => {
     let best = null;
     for (let o = 0; o < cube.origins.length; o++) {
       const a = byDayOrigin.get(d.k + "|" + o); if (!a || cube.origins[o] === "Other airports") continue;
       const excess = a.late - a.p; if (!best || excess > best.excess) best = {o, excess, a};
     }
-    const who = best ? `${cube.origins[best.o]}: ${Math.round(best.excess)} more late departures than expected (${pct(best.a.late / best.a.n)} actual vs ${pct(best.a.p / best.a.n)} predicted)` : "–";
-    return `<tr class="pick" tabindex="0" data-dim="day" data-k="${d.k}"><td>${niceDate(cube.dates[d.k])}</td><td>${pct(d.pred)}</td><td>${pct(d.obs)}</td><td>${gapText(d.obs - d.pred)}</td><td style="text-align:left;white-space:normal">${who}</td></tr>`;
+    const where = best ? ` Hardest hit: <strong>${airport(cube.origins[best.o])}</strong>, ${pct0(best.a.late / best.a.n)} late instead of the expected ${pct0(best.a.p / best.a.n)}.` : "";
+    return `<li class="pick" style="cursor:pointer" data-dim="day" data-k="${d.k}"><strong>${niceDate(cube.dates[d.k], {weekday: "long", month: "long", day: "numeric"})}</strong>: ${pct0(d.obs)} of flights left late; the model expected ${pct0(d.pred)}.${where}</li>`;
   }).join("");
-  const gapRows = (m, names, dim, minFlights) => [...m.entries()]
-    .filter(([k, a]) => a.n >= minFlights && names[k] !== "Other airports")
-    .map(([k, a]) => ({k, pred: a.p / a.n, obs: a.late / a.n}))
-    .sort((a, b) => Math.abs(b.obs - b.pred) - Math.abs(a.obs - a.pred)).slice(0, 8)
-    .map(g => `<tr class="pick" tabindex="0" data-dim="${dim}" data-k="${g.k}"><td>${names[g.k]}</td><td>${pct(g.pred)}</td><td>${pct(g.obs)}</td><td>${gapText(g.obs - g.pred)}</td></tr>`).join("");
-  const minN = Math.max(500, Math.round(cube.rows.reduce((s, r) => s + r[4], 0) * 0.005));
-  $("tb-gap-origin").innerHTML = gapRows(byOrigin, cube.origins, "origin", minN);
-  $("tb-gap-carrier").innerHTML = gapRows(byCarrier, cube.carriers, "carrier", minN);
+}
+
+function technical() {
+  const d = metrics.data, test = d.test, res = metrics.test_metrics;
+  $("split").textContent = `Trained on ${num(d.train.flights)} flights (${d.train.from} to ${d.train.to}), scored on ${num(test.flights)} later flights (${test.from} to ${test.to}). ${pct(d.test_delay_rate)} of test flights left late.`;
+  const best = Object.keys(res).reduce((a, b) => res[a].pr_auc >= res[b].pr_auc ? a : b);
+  $("tb-models").innerHTML = Object.entries(res).map(([k, v]) =>
+    `<tr class="${k === best ? "best" : ""}"><td style="white-space:normal">${LABELS[k] || k}</td><td>${v.pr_auc.toFixed(3)}</td><td>${v.roc_auc.toFixed(3)}</td><td>${v.brier.toFixed(4)}</td></tr>`).join("");
+  $("note").textContent = `Higher PR-AUC and ROC-AUC are better; lower Brier is better. PR-AUC of a random guess equals the delay rate, ${d.test_delay_rate.toFixed(3)}.`;
+  const cal = metrics.calibration, scale = Math.max(0.05, ...cal.map(c => Math.max(c.predicted, c.observed))) * 1.05;
+  $("tb-calib").innerHTML = cal.map((c, i) =>
+    `<tr><td>${i + 1}${i === 0 ? " (lowest risk)" : i === cal.length - 1 ? " (highest risk)" : ""}</td>${barCell(c.predicted, c.observed, scale)}<td>${pct(c.predicted)}</td><td>${pct(c.observed)}</td><td>${num(c.flights)}</td></tr>`).join("");
   const imp = (metrics.importance || []).slice(0, 10), top = imp.length ? imp[0].share || 1 : 1;
   $("tb-imp").innerHTML = imp.map(r => `<tr><td style="white-space:normal">${FEATURE_NAMES[r.feature] || r.feature}</td><td class="bar"><div class="track"><div class="fill" style="width:${100 * r.share / top}%"></div></div></td><td>${pct(r.share)}</td></tr>`).join("");
+  const byOrigin = aggregate("origin", [], false), byCarrier = aggregate("carrier", [], false);
+  const minN = Math.max(500, Math.round(overall.n * 0.005));
+  const gapText = g => (g > 0 ? "+" : "") + (100 * g).toFixed(1) + " pts";
+  const gapRows = (m, names, fmt) => [...m.entries()]
+    .filter(([k, a]) => a.n >= minN && names[k] !== "Other airports")
+    .map(([k, a]) => ({k, pred: a.p / a.n, obs: a.late / a.n}))
+    .sort((a, b) => Math.abs(b.obs - b.pred) - Math.abs(a.obs - a.pred)).slice(0, 8)
+    .map(g => `<tr><td>${fmt(names[g.k])}</td><td>${pct(g.pred)}</td><td>${pct(g.obs)}</td><td>${gapText(g.obs - g.pred)}</td></tr>`).join("");
+  $("tb-gap-origin").innerHTML = gapRows(byOrigin, cube.origins, airport);
+  $("tb-gap-carrier").innerHTML = gapRows(byCarrier, cube.carriers, airline);
 }
-
-function render() {
-  const all = aggregate(null).get(0) || {n: 0, late: 0, p: 0};
-  $("t-n").textContent = num(all.n);
-  $("t-pred").textContent = all.n ? pct(all.p / all.n) : "–";
-  $("t-obs").textContent = all.n ? pct(all.late / all.n) : "–";
-  const gap = all.n ? 100 * (all.p - all.late) / all.n : NaN;
-  $("t-gap").textContent = isFinite(gap) ? (gap > 0 ? "+" : "") + gap.toFixed(1) + " pts" : "–";
-  drawChart();
-  fillTable("tb-origin", "origin", cube.origins, true);
-  fillTable("tb-part", "part", cube.parts, false);
-  fillTable("tb-carrier", "carrier", cube.carriers, true);
-  for (const dim of DIMS) $("f-" + dim).value = String(state[dim]);
-}
-
-function setFilter(dim, k) { state[dim] = state[dim] === k ? -1 : k; render(); }
 
 function setup() {
+  overall = aggregate(null, [], false).get(0);
   const fill = (id, all, names, fmt = x => x) =>
-    $(id).innerHTML = `<option value="-1">${all}</option>` + names.map((v, i) => `<option value="${i}">${fmt(v)}</option>`).join("");
-  fill("f-day", "All days", cube.dates, niceDate);
-  fill("f-origin", "All airports", cube.origins);
-  fill("f-carrier", "All airlines", cube.carriers);
+    $(id).innerHTML = `<option value="-1">${all}</option>` + names.map((v, i) => [i, fmt(v)]).sort((a, b) => id === "f-day" ? 0 : a[1].localeCompare(b[1])).map(([i, t]) => `<option value="${i}">${t}</option>`).join("");
+  fill("f-day", "Any day", cube.dates, s => niceDate(s));
+  fill("f-origin", "Any airport", cube.origins, airport);
+  fill("f-carrier", "Any airline", cube.carriers, airline);
   fill("f-part", "Any time", cube.parts);
   for (const dim of DIMS) $("f-" + dim).addEventListener("change", e => { state[dim] = Number(e.target.value); render(); });
   $("reset").addEventListener("click", () => { for (const d of DIMS) state[d] = -1; render(); });
   document.addEventListener("click", e => {
-    const row = e.target.closest("tr.pick"); if (row) return setFilter(row.dataset.dim, Number(row.dataset.k));
-    const day = e.target.closest("rect[data-day]"); if (day) setFilter("day", Number(day.dataset.day));
+    const row = e.target.closest(".pick"); if (row) return setFilter(row.dataset.dim, Number(row.dataset.k));
+    const day = e.target.closest("rect[data-day]"); if (day) { state.day = state.day === Number(day.dataset.day) ? -1 : Number(day.dataset.day); render(); }
   });
   document.addEventListener("keydown", e => {
     if (e.key !== "Enter") return;
-    const row = e.target.closest && e.target.closest("tr.pick"); if (row) setFilter(row.dataset.dim, Number(row.dataset.k));
+    const row = e.target.closest && e.target.closest(".pick"); if (row) setFilter(row.dataset.dim, Number(row.dataset.k));
   });
-
-  const d = metrics.data, test = d.test;
-  $("intro").innerHTML = `A model predicts, one day ahead, which US flights will leave the gate 15 or more minutes late. It was trained on ${num(d.train.flights)} flights from ${d.train.from} to ${d.train.to}. Everything on this page is the <strong>${num(test.flights)} later flights</strong> it had never seen, from ${test.from} to ${test.to}. Pick a day, airport, airline or time of day to compare what the model expected with what happened.`;
-  $("split").textContent = `Scored on the test period only (${test.from} to ${test.to}). ${pct(d.test_delay_rate)} of those flights left late.`;
-  const res = metrics.test_metrics, best = Object.keys(res).reduce((a, b) => res[a].pr_auc >= res[b].pr_auc ? a : b);
-  $("tb-models").innerHTML = Object.entries(res).map(([k, v]) =>
-    `<tr class="${k === best ? "best" : ""}"><td>${LABELS[k] || k}</td><td>${v.pr_auc.toFixed(3)}</td><td>${v.roc_auc.toFixed(3)}</td><td>${v.brier.toFixed(4)}</td></tr>`).join("");
-  $("note").textContent = `PR-AUC of a random guess equals the delay rate, ${d.test_delay_rate.toFixed(3)}. Higher PR-AUC and ROC-AUC are better; lower Brier is better.`;
-  const cal = metrics.calibration, scale = Math.max(0.05, ...cal.map(c => Math.max(c.predicted, c.observed))) * 1.05;
-  $("tb-calib").innerHTML = cal.map((c, i) =>
-    `<tr><td>${i + 1}${i === 0 ? " (lowest risk)" : i === cal.length - 1 ? " (highest risk)" : ""}</td>${barCell(c.predicted, c.observed, scale)}<td>${pct(c.predicted)}</td><td>${pct(c.observed)}</td><td>${num(c.flights)}</td></tr>`).join("");
-  renderMisses();
-  render();
+  const d = metrics.data;
+  $("intro").innerHTML = `A machine-learning model that predicts, the day before, which US flights will leave the gate 15 or more minutes late. It learned from ${num(d.train.flights)} past flights and is tested here on <strong>${num(d.test.flights)} flights it had never seen</strong> (${niceDate(d.test.from, {month: "long", day: "numeric"})} – ${niceDate(d.test.to, {month: "long", day: "numeric", year: "numeric"})}).`;
+  takeaways(); ladder(); misses(); technical(); render();
 }
 
 fetch("data.json").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(d => { cube = d.cube; metrics = d.metrics; setup(); })
-  .catch(() => { $("intro").textContent = "Results could not be loaded. Run the pipeline to produce data.json."; });
+  .catch(err => { console.error(err); $("intro").textContent = "Results could not be loaded. Run the pipeline to produce data.json."; });
 </script>
 </body>
 </html>

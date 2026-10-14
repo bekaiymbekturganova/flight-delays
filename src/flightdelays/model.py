@@ -18,6 +18,7 @@ from sklearn.preprocessing import StandardScaler
 from .config import (
     ARTIFACTS_DIR,
     BASE_FEATURES,
+    V2_FEATURES,
     CATEGORICAL,
     CATEGORIES_PATH,
     FEATURES,
@@ -190,6 +191,10 @@ def train(features_path: Path = FEATURES_PATH, artifacts_dir: Path = ARTIFACTS_D
     base = fit(BASE_FEATURES)
     results["gradient_boosting_base"] = score(
         y_test, base.predict(X_test[BASE_FEATURES], num_iteration=base.best_iteration)
+    )
+    v2 = fit(V2_FEATURES)
+    results["gradient_boosting_v2"] = score(
+        y_test, v2.predict(X_test[V2_FEATURES], num_iteration=v2.best_iteration)
     )
     booster = fit(FEATURES)
     p_test = booster.predict(X_test, num_iteration=booster.best_iteration)
