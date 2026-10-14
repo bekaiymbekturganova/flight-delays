@@ -48,8 +48,14 @@ history up to yesterday. No same-day outcomes and no actual departure times.
   past model forecasts. Observed weather would be leakage.
 - **Every addition is measured.** The report keeps the schedule-and-history
   model next to the full one, so the gain from rotation and weather is visible.
-- **Cancelled and diverted flights are excluded.** They have no departure
+- **Cancelled flights stay in the schedule, but not in the labels.** The
+  schedule features (traffic at the airport, the aircraft's legs and
+  turnarounds) are computed on every scheduled flight, because cancellations
+  are decided on the day, often because of storms. Counting only flights that
+  operated would quietly tell the model "today was a bad day". Cancelled and
+  diverted flights are left out of training and scoring: they have no departure
   delay, and cancellations have different causes.
+  (`tests/test_pipeline.py::test_cancellations_on_the_flight_day_do_not_leak`)
 
 ## Run it
 
@@ -85,9 +91,12 @@ They are not copied here by hand, so the numbers always match the code.
 
 - The forecast archive holds short-lead model runs, a slightly optimistic
   stand-in for a forecast issued exactly one day ahead.
-- Aircraft assignments can change on the day. The rotation features assume the
-  planned tail number is known the day before.
-- Weather is daily. Hourly forecasts around departure time would be sharper.
+- Aircraft assignments can change on the day. BTS records the tail number that
+  actually flew, so after a same-day aircraft swap the rotation features
+  describe the swapped aircraft. That is a small leak that this data cannot
+  remove; the rotation gain should be read as an upper bound.
+- Weather is daily and covers the 60 busiest airports, to stay inside the free
+  weather API's limits. Other airports have no weather features.
 - The API does not take rotation or weather inputs yet and treats them as missing.
 - The serving snapshot uses the last four weeks of the training data. A real
   deployment would refresh it daily.
