@@ -17,12 +17,16 @@ def test_month_range_crosses_year():
         month_range("2025-03", "2025-01")
 
 
-def test_clean_drops_cancelled_and_labels_delay(workdir):
+def test_clean_keeps_the_schedule_and_labels_operated_flights(workdir):
     raw = workdir["raw"]
     assert workdir["kept"] == int((raw.Cancelled == 0).sum())
     flights = pd.read_parquet(workdir["root"] / "flights.parquet")
-    assert set(flights.delayed.unique()) <= {0, 1}
-    assert (flights.delayed == (flights.dep_delay >= 15)).all()
+    # Cancelled flights stay in the schedule but carry no label.
+    assert len(flights) == len(raw)
+    assert flights.loc[~flights.operated, "delayed"].isna().all()
+    operated = flights[flights.operated]
+    assert set(operated.delayed.unique()) <= {0, 1}
+    assert (operated.delayed == (operated.dep_delay >= 15)).all()
     assert flights.dep_hour.between(0, 23).all()
     assert "ArrDelay" not in flights.columns
 
@@ -30,7 +34,8 @@ def test_clean_drops_cancelled_and_labels_delay(workdir):
 def test_features_keep_one_row_per_flight(workdir):
     flights = pd.read_parquet(workdir["root"] / "flights.parquet")
     feats = pd.read_parquet(workdir["root"] / "features.parquet")
-    assert len(feats) == len(flights)
+    assert len(feats) == int(flights.operated.sum())
+    assert feats.delayed.notna().all()
     assert set(FEATURES) <= set(feats.columns)
 
 
@@ -45,6 +50,7 @@ def test_history_matches_a_manual_calculation(workdir):
         (flights.origin == "ORD")
         & (flights.flight_date >= day - pd.Timedelta(days=HISTORY_DAYS))
         & (flights.flight_date < day)
+        & flights.operated  # history only learns from flights that have an outcome
     ]
     got = feats[(feats.origin == "ORD") & (feats.flight_date == day)]
     assert len(got) > 0
@@ -61,15 +67,38 @@ def test_no_leakage_from_the_flight_day(workdir, tmp_path):
     mask = tampered.flight_date == day
     tampered.loc[mask, "delayed"] = 1 - tampered.loc[mask, "delayed"]
     tampered.to_parquet(tmp_path / "t.parquet")
+    _assert_day_features_unchanged(workdir, tmp_path, day)
 
+
+def test_cancellations_on_the_flight_day_do_not_leak(workdir, tmp_path):
+    """Cancelling flights on a day must not change the features of the flights that still fly.
+
+    Cancellations are decided on the day (often because of storms), so a
+    schedule feature that only counts flights that operated would leak them.
+    """
+    src = workdir["root"] / "flights.parquet"
+    flights = pd.read_parquet(src)
+    day = sorted(flights.flight_date.unique())[70]
+    on_day = flights.index[(flights.flight_date == day) & flights.operated]
+    cancel = on_day[::3]
+    tampered = flights.copy()
+    tampered.loc[cancel, ["operated", "delayed", "dep_delay"]] = [False, None, None]
+    tampered.to_parquet(tmp_path / "t.parquet")
+    _assert_day_features_unchanged(workdir, tmp_path, day, drop=flights.loc[cancel])
+
+
+def _assert_day_features_unchanged(workdir, tmp_path, day, drop=None):
     from flightdelays.features import build_features
 
     build_features(tmp_path / "t.parquet", tmp_path / "f.parquet", workdir["root"] / "weather.parquet")
-    order = "carrier, origin, dest, dep_hour, distance, crs_elapsed"
     cols = ", ".join(FEATURES)
     con = duckdb.connect()
-    a = con.execute(f"SELECT {cols} FROM '{workdir['root'] / 'features.parquet'}' WHERE flight_date = ? ORDER BY {order}", [day]).df()
-    b = con.execute(f"SELECT {cols} FROM '{tmp_path / 'f.parquet'}' WHERE flight_date = ? ORDER BY {order}", [day]).df()
+    query = f"SELECT flight_id, {cols} FROM '{{}}' WHERE flight_date = ? ORDER BY flight_id"
+    a = con.execute(query.format(workdir["root"] / "features.parquet"), [day]).df()
+    b = con.execute(query.format(tmp_path / "f.parquet"), [day]).df()
+    if drop is not None:
+        # The cancelled flights leave the labelled table; everyone else must look the same.
+        a = a[~a.flight_id.isin(drop.flight_id)].reset_index(drop=True)
     pd.testing.assert_frame_equal(a, b)
 
 
