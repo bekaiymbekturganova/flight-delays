@@ -46,8 +46,12 @@ history up to yesterday. No same-day outcomes and no actual departure times.
   turnaround is.
 - **Forecast weather, not observed weather.** Weather comes from an archive of
   past model forecasts. Observed weather would be leakage.
+- **Last week's trend, for seasonal swings.** The model trained on autumn and
+  winter under-predicted summer delays. Seven-day delay rates (airport, airline
+  and the whole US network) let it notice quickly when the system starts running
+  late. Like every history feature, the window ends the day before the flight.
 - **Every addition is measured.** The report keeps the schedule-and-history
-  model next to the full one, so the gain from rotation and weather is visible.
+  model next to the full one, so the gain from rotation, weather and the last-week trend is visible.
 - **Cancelled flights stay in the schedule, but not in the labels.** The
   schedule features (traffic at the airport, the aircraft's legs and
   turnarounds) are computed on every scheduled flight, because cancellations
