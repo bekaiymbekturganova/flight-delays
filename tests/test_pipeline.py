@@ -221,3 +221,21 @@ def test_weather_cache_is_used_only_when_it_covers_the_dates(tmp_path):
     assert len(hit) == 4
     assert load_cache(tmp_path / "w.parquet", dt.date(2025, 1, 1), dt.date(2025, 2, 1)) is None
     assert load_cache(tmp_path / "missing.parquet", dt.date(2025, 1, 1), dt.date(2025, 1, 5)) is None
+
+
+def test_last_week_rate_matches_a_manual_calculation(workdir):
+    """nation_7d_rate must equal the share of late flights in the 7 days before."""
+    from flightdelays.config import RECENT_DAYS
+
+    flights = pd.read_parquet(workdir["root"] / "flights.parquet")
+    feats = pd.read_parquet(workdir["root"] / "features.parquet")
+    flights["flight_date"] = pd.to_datetime(flights.flight_date)
+    feats["flight_date"] = pd.to_datetime(feats.flight_date)
+    day = flights.flight_date.min() + pd.Timedelta(days=40)
+    window = flights[
+        (flights.flight_date >= day - pd.Timedelta(days=RECENT_DAYS))
+        & (flights.flight_date < day)
+        & flights.operated
+    ]
+    got = feats.loc[feats.flight_date == day, "nation_7d_rate"]
+    assert np.allclose(got, window.delayed.mean())
