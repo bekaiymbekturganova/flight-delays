@@ -50,6 +50,12 @@ history up to yesterday. No same-day outcomes and no actual departure times.
   winter under-predicted summer delays. Seven-day delay rates (airport, airline
   and the whole US network) let it notice quickly when the system starts running
   late. Like every history feature, the window ends the day before the flight.
+- **Re-centre the forecasts every day.** Even with the trend features the
+  model's probabilities ran low in summer. Each evening the forecasts for
+  tomorrow are shifted on the log-odds scale by the gap between the last 14
+  days' forecasts and outcomes. Only finished days are used
+  (`tests/test_pipeline.py::test_recalibration_only_uses_earlier_days`). This
+  changes the level of the probabilities, not which flights look riskiest.
 - **Every addition is measured.** The report keeps the schedule-and-history
   model next to the full one, so the gain from rotation, weather and the last-week trend is visible.
 - **Cancelled flights stay in the schedule, but not in the labels.** The
