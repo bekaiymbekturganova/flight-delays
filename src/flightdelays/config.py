@@ -42,6 +42,8 @@ DELAY_THRESHOLD_MIN = 15
 HISTORY_DAYS = 28
 # A shorter window that reacts faster when delays rise or fall with the season.
 RECENT_DAYS = 7
+# Days of known outcomes used to re-centre the model's probabilities each day.
+RECAL_DAYS = 14
 
 # Public airport coordinates (OurAirports, public domain).
 AIRPORTS_URL = "https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv"

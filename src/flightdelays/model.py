@@ -27,6 +27,7 @@ from .config import (
     METRICS_PATH,
     MODEL_PATH,
     NUMERIC,
+    RECAL_DAYS,
     TARGET,
 )
 
@@ -124,6 +125,44 @@ def to_matrix(df: pd.DataFrame, categories: dict[str, list[str]]) -> pd.DataFram
     return X
 
 
+def _logit(p: np.ndarray) -> np.ndarray:
+    p = np.clip(p, 1e-6, 1 - 1e-6)
+    return np.log(p / (1 - p))
+
+
+def recalibrate(dates: np.ndarray, y: np.ndarray, p: np.ndarray, score_from, window: int = RECAL_DAYS) -> np.ndarray:
+    """Shift each day's probabilities so recent forecasts match recent outcomes.
+
+    The model learns from autumn and winter and is scored on summer, when more
+    flights run late, so its raw probabilities come out too low. Every morning
+    (in the evening before, really) we already know how the last `window` days
+    turned out. For each day D from `score_from` on, the probabilities are moved
+    on the log-odds scale by one number:
+
+        shift = logit(actual late rate) - logit(average forecast)
+
+    both measured over the days D-window .. D-1. Only days strictly before D are
+    used, so no outcome from the flight's own day leaks in. The order of flights
+    within a day does not change; only the level does.
+
+    Returns the adjusted probabilities for the rows on or after `score_from`.
+    """
+    dates = pd.to_datetime(pd.Series(dates)).dt.normalize().to_numpy()
+    frame = pd.DataFrame({"d": dates, "y": y, "p": p})
+    daily = frame.groupby("d").agg(late=("y", "sum"), p=("p", "sum"), n=("y", "size"))
+    out_mask = dates >= np.datetime64(pd.Timestamp(score_from))
+    shift = {}
+    for day in np.unique(dates[out_mask]):
+        past = daily.loc[(daily.index < day) & (daily.index >= day - np.timedelta64(window, "D"))]
+        if past["n"].sum() == 0:
+            shift[day] = 0.0
+            continue
+        obs, pred = past["late"].sum() / past["n"].sum(), past["p"].sum() / past["n"].sum()
+        shift[day] = float(_logit(np.array([obs]))[0] - _logit(np.array([pred]))[0])
+    s = np.array([shift[d] for d in dates[out_mask]])
+    return 1 / (1 + np.exp(-(_logit(p[out_mask]) + s)))
+
+
 def score(y_true: np.ndarray, p: np.ndarray) -> dict[str, float]:
     return {
         "pr_auc": float(average_precision_score(y_true, p)),
@@ -197,8 +236,19 @@ def train(features_path: Path = FEATURES_PATH, artifacts_dir: Path = ARTIFACTS_D
         y_test, v2.predict(X_test[V2_FEATURES], num_iteration=v2.best_iteration)
     )
     booster = fit(FEATURES)
-    p_test = booster.predict(X_test, num_iteration=booster.best_iteration)
-    results["gradient_boosting"] = score(y_test, p_test)
+    p_raw = booster.predict(X_test, num_iteration=booster.best_iteration)
+    results["gradient_boosting"] = score(y_test, p_raw)
+
+    # Re-centre each day's forecasts on the last two weeks of known outcomes.
+    # The validation period supplies the history for the first test days.
+    p_valid = booster.predict(X_valid, num_iteration=booster.best_iteration)
+    p_test = recalibrate(
+        np.concatenate([valid_df["flight_date"].to_numpy(), test_df["flight_date"].to_numpy()]),
+        np.concatenate([y_valid, y_test]),
+        np.concatenate([p_valid, p_raw]),
+        score_from=test_df["flight_date"].min(),
+    )
+    results["gradient_boosting_recalibrated"] = score(y_test, p_test)
 
     by_hour = (
         pd.DataFrame({"dep_hour": test_df["dep_hour"].to_numpy(), "y": y_test, "p": p_test})
@@ -227,6 +277,13 @@ def train(features_path: Path = FEATURES_PATH, artifacts_dir: Path = ARTIFACTS_D
         "test_metrics": results,
         "best_iteration": int(booster.best_iteration or 0),
         "calibration": calibration_table(y_test, p_test),
+        "calibration_raw": calibration_table(y_test, p_raw),
+        "recalibration": {
+            "window_days": RECAL_DAYS,
+            "mean_raw": round(float(p_raw.mean()), 4),
+            "mean_recalibrated": round(float(p_test.mean()), 4),
+            "observed": round(float(y_test.mean()), 4),
+        },
         "by_hour": by_hour,
         "importance": [{"feature": f, "share": round(v / total_gain, 4)} for f, v in importance],
     }

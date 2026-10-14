@@ -4,154 +4,196 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Flight delay risk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f5f6f9;--surface:#fff;--ink:#0e1a33;--muted:#4a5470;--line:#d8dce6;--obs:#0e1a33;--pred:#b3264a;--soft:#eceff5;--accent-bg:#fbeef1}
-@media (prefers-color-scheme:dark){:root{--bg:#0a1122;--surface:#111b31;--ink:#eceef4;--muted:#a3adc4;--line:#26324d;--obs:#c9d4ee;--pred:#f08aa2;--soft:#1a2540;--accent-bg:#2a1622}}
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#1c2330;--ink:#e6edf3;--muted:#9da7b3;--line:#30363d;--soft:#21262d;
+  --obs:#e6edf3;--pred:#ff8a65;--kw:#ff7b72;--str:#a5d6ff;--fn:#d2a8ff;--num:#79c0ff;--ok:#56d364;--cmt:#8b949e;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--sans:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;padding:32px 16px 72px}
-main{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:36px}
-h1{font-size:clamp(1.9rem,5vw,2.7rem);line-height:1.1;margin:0;letter-spacing:-.02em}
-h2{font-size:1.35rem;margin:0;letter-spacing:-.01em}
-h3{font-size:1rem;margin:0}
-p{margin:0}.muted{color:var(--muted)}.small{font-size:.88rem}
-.lede{max-width:64ch;margin-top:10px;font-size:1.08rem}
-a{color:var(--pred)}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--sans);padding:0 16px 80px;
+  background-image:radial-gradient(circle at 1px 1px,#1f2733 1px,transparent 0);background-size:22px 22px}
+main{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:44px}
+.topbar{max-width:1000px;margin:0 auto;padding:14px 0;display:flex;justify-content:space-between;align-items:center;font:13px var(--mono);color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:36px}
+.topbar a{color:var(--muted);text-decoration:none}.topbar a:hover{color:var(--ink)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-right:8px;box-shadow:0 0 8px var(--ok)}
+h1{font:700 clamp(2rem,5.5vw,3.1rem)/1.08 var(--mono);margin:0;letter-spacing:-.03em}
+h1 .cursor{display:inline-block;width:.55em;height:.9em;background:var(--pred);vertical-align:-.08em;margin-left:6px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){h1 .cursor{animation:none}}
+h2{font:700 1.25rem/1.3 var(--mono);margin:0}
+h2 .c{color:var(--cmt);font-weight:400}
+h3{font:600 .95rem var(--mono);margin:0;color:var(--fn)}
+p{margin:0}.muted{color:var(--muted)}.small{font-size:.9rem}
+code,.mono{font-family:var(--mono)}
+.lede{max-width:66ch;margin-top:14px;font-size:1.08rem;color:var(--muted)}
+.lede strong{color:var(--ink)}
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.badge{font:12px var(--mono);border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--muted);background:var(--surface)}
+.badge b{color:var(--str);font-weight:600}
+a{color:var(--str)}
 section{display:flex;flex-direction:column;gap:14px}
-.sec-head{display:flex;flex-direction:column;gap:4px}
+.sec-head{display:flex;flex-direction:column;gap:6px}
+.win{background:var(--surface);border:1px solid var(--line);border-radius:10px;min-width:0;overflow:hidden}
+.win-bar{display:flex;align-items:center;gap:7px;padding:9px 14px;border-bottom:1px solid var(--line);background:var(--surface2);font:12px var(--mono);color:var(--muted)}
+.win-bar i{width:10px;height:10px;border-radius:50%;display:inline-block;background:#3d444d}
+.win-bar i:nth-child(1){background:#ff5f57}.win-bar i:nth-child(2){background:#febc2e}.win-bar i:nth-child(3){background:#28c840}
+.win-bar span{margin-left:8px}
+.win-body{padding:18px 20px;display:flex;flex-direction:column;gap:12px}
 .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;min-width:0}
-.take b{display:block;font-size:2.1rem;line-height:1.05;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.take{padding:18px 20px;display:flex;flex-direction:column;gap:8px}
+.take .k{font:12px var(--mono);color:var(--cmt)}
+.take b{display:block;font:700 2rem/1.1 var(--mono);color:var(--num);letter-spacing:-.02em}
 .take p{color:var(--muted)}
 .filters{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.filters label{display:flex;flex-direction:column;gap:4px;font-size:.82rem;font-weight:600;color:var(--muted);min-width:0}
-select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px;width:100%}
-select:focus-visible,button:focus-visible,tr:focus-visible,summary:focus-visible{outline:2px solid var(--pred);outline-offset:2px}
-.reset{align-self:flex-start;font:inherit;font-size:.9rem;background:none;border:0;color:var(--pred);padding:0;cursor:pointer;text-decoration:underline}
-.answer{display:grid;grid-template-columns:auto 1fr;gap:6px 22px;align-items:center;background:var(--accent-bg);border-radius:10px;padding:18px 20px}
-.answer .big{font-size:3rem;font-weight:700;line-height:1;font-variant-numeric:tabular-nums;color:var(--pred)}
-.answer .what{font-size:1.05rem}
-.legend{display:flex;gap:18px;font-size:.85rem;color:var(--muted);flex-wrap:wrap;align-items:center}
+.filters label{display:flex;flex-direction:column;gap:5px;font:12px var(--mono);color:var(--kw);min-width:0}
+.filters label::before{content:"--";color:var(--cmt)}
+.filters label{flex-direction:row;flex-wrap:wrap;align-items:baseline}
+.filters select{flex-basis:100%}
+select{font:14px var(--sans);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:9px;width:100%}
+select:focus-visible,button:focus-visible,tr:focus-visible,summary:focus-visible,li:focus-visible{outline:2px solid var(--str);outline-offset:2px}
+.reset{align-self:flex-start;font:13px var(--mono);background:none;border:1px solid var(--line);border-radius:6px;color:var(--muted);padding:5px 10px;cursor:pointer}
+.reset:hover{color:var(--ink);border-color:var(--muted)}
+.term{background:#010409;border:1px solid var(--line);border-radius:8px;padding:16px 18px;font:14px/1.7 var(--mono);overflow-x:auto}
+.term .prompt{color:var(--ok)}.term .cmd{color:var(--ink)}.term .flag{color:var(--str)}
+.term .out{display:flex;gap:18px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.term .big{font:700 2.8rem/1 var(--mono);color:var(--pred)}
+.term .what{font-family:var(--sans);font-size:1rem;color:var(--ink);flex:1;min-width:220px}
+.term .what .muted{font-size:.92rem}
+.legend{display:flex;gap:18px;font:12px var(--mono);color:var(--muted);flex-wrap:wrap;align-items:center}
 .key{display:inline-block;width:16px;height:10px;border-radius:2px;vertical-align:middle;margin-right:6px}
 .key.tick{width:3px;height:14px;border-radius:1px}
 svg{display:block;width:100%;height:auto}
-svg text{fill:var(--muted);font-size:12px}
+svg text{fill:var(--muted);font:11px var(--mono)}
 .scroll{overflow-x:auto}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.95rem}
 th,td{text-align:right;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
-th{font-size:.78rem;color:var(--muted);font-weight:600}
-td .sub{display:block;font-size:.78rem;color:var(--muted)}
+th{font:600 11px var(--mono);color:var(--cmt);text-transform:uppercase;letter-spacing:.04em}
+td .sub{display:block;font:11px var(--mono);color:var(--cmt)}
+td.v{font-family:var(--mono);color:var(--ink)}
 tbody tr.pick{cursor:pointer}tbody tr.pick:hover{background:var(--soft)}
-tr.on td{font-weight:700}
+tr.on td{color:var(--str)}
 td.bar{text-align:left;width:42%}
-.track{position:relative;height:14px;background:var(--soft);border-radius:4px;min-width:80px}
-.fill{position:absolute;left:0;top:0;bottom:0;background:var(--pred);border-radius:0 4px 4px 0;opacity:.88}
+.track{position:relative;height:12px;background:var(--soft);border-radius:4px;min-width:80px}
+.fill{position:absolute;left:0;top:0;bottom:0;background:var(--pred);border-radius:0 4px 4px 0;opacity:.9}
 .tickm{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:1px;background:var(--obs)}
 .empty{padding:24px;text-align:center;color:var(--muted)}
 .grid3{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.ladder{display:flex;flex-direction:column;gap:12px}
-.rung{display:grid;grid-template-columns:minmax(150px,38%) 1fr 56px;gap:12px;align-items:center}
-.rung .lbl b{display:block;font-size:.95rem}.rung .lbl span{font-size:.82rem;color:var(--muted)}
-.rung .val{font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
-.rung.best .fill{opacity:1}
-.miss{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
-.miss li{border-left:3px solid var(--pred);padding:2px 0 2px 12px}
+.ladder{display:flex;flex-direction:column;gap:14px}
+.rung{display:grid;grid-template-columns:minmax(150px,40%) 1fr 56px;gap:12px;align-items:center}
+.rung .lbl b{display:block;font:600 .9rem var(--mono);color:var(--fn)}.rung .lbl span{font-size:.85rem;color:var(--muted)}
+.rung .val{font:700 1rem var(--mono);text-align:right;color:var(--num)}
+.rung .fill{background:var(--fn);opacity:.55}.rung.best .fill{opacity:1}
+.note{border-left:3px solid var(--ok);padding:4px 0 4px 12px;color:var(--muted)}
+.note b{color:var(--ink)}
+.miss{display:flex;flex-direction:column;gap:12px;margin:0;padding:0;list-style:none}
+.miss li{border-left:3px solid var(--kw);padding:2px 0 2px 12px;color:var(--muted)}
+.miss li strong{color:var(--ink)}
 details.tech{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0 20px}
-details.tech>summary{cursor:pointer;padding:16px 0;font-weight:700;font-size:1.05rem}
+details.tech>summary{cursor:pointer;padding:16px 0;font:600 .95rem var(--mono);color:var(--fn)}
 details.tech[open]>summary{border-bottom:1px solid var(--line);margin-bottom:16px}
 .tech-body{display:flex;flex-direction:column;gap:22px;padding-bottom:20px}
 .tech-body h3{margin-bottom:4px}
-details.more>summary{cursor:pointer;color:var(--pred);font-size:.9rem;margin-top:6px}
-tr.best td{font-weight:700}
-@media (max-width:760px){.cards,.grid3{grid-template-columns:1fr}.filters{grid-template-columns:1fr 1fr}.answer{grid-template-columns:1fr}.rung{grid-template-columns:1fr 56px}.rung .lbl{grid-column:1/-1}}
+details.more>summary{cursor:pointer;color:var(--str);font:13px var(--mono);margin-top:6px}
+tr.best td{color:var(--ok)}
+footer{font:12px/1.7 var(--mono);color:var(--cmt);border-top:1px solid var(--line);padding-top:18px}
+@media (max-width:760px){.cards,.grid3{grid-template-columns:1fr}.filters{grid-template-columns:1fr 1fr}.rung{grid-template-columns:1fr 56px}.rung .lbl{grid-column:1/-1}}
 </style>
 </head>
 <body>
+<div class="topbar"><span><span class="dot"></span>flight-delays / results</span><a href="https://github.com/bekaiymbekturganova/flight-delays">view source →</a></div>
 <main>
 <header>
-  <h1>Will your flight leave late?</h1>
-  <p class="lede muted" id="intro">Loading results…</p>
+  <h1>Will your flight<br>leave late?<span class="cursor" aria-hidden="true"></span></h1>
+  <p class="lede" id="intro">Loading results…</p>
+  <div class="badges" id="badges"></div>
 </header>
 
 <section aria-labelledby="h-short">
-  <div class="sec-head"><h2 id="h-short">The short version</h2></div>
+  <div class="sec-head"><h2 id="h-short"><span class="c">// 01 ·</span> the short version</h2></div>
   <div class="cards" id="takeaways"></div>
 </section>
 
 <section aria-labelledby="h-check">
   <div class="sec-head">
-    <h2 id="h-check">Check a flight</h2>
-    <p class="muted small">Pick an airport, airline or time of day. The numbers come from real flights in the test period, which the model never saw while learning.</p>
+    <h2 id="h-check"><span class="c">// 02 ·</span> check a flight</h2>
+    <p class="muted small">Pick an airport, airline or time of day. Numbers come from real flights in the test period, which the model never saw while learning.</p>
   </div>
-  <div class="card">
-    <div class="filters" aria-label="Filters">
-      <label>Departure airport<select id="f-origin"></select></label>
-      <label>Airline<select id="f-carrier"></select></label>
-      <label>Time of day<select id="f-part"></select></label>
-      <label>Day<select id="f-day"></select></label>
+  <div class="win">
+    <div class="win-bar"><i></i><i></i><i></i><span>check_flight.py</span></div>
+    <div class="win-body">
+      <div class="filters" aria-label="Filters">
+        <label>airport<select id="f-origin"></select></label>
+        <label>airline<select id="f-carrier"></select></label>
+        <label>time<select id="f-part"></select></label>
+        <label>day<select id="f-day"></select></label>
+      </div>
+      <button class="reset" id="reset" type="button">clear()</button>
+      <div class="term" aria-live="polite">
+        <div><span class="prompt">$</span> <span class="cmd">python check_flight.py</span> <span class="flag" id="a-cmd"></span></div>
+        <div class="out"><div class="big" id="a-obs">–</div><div class="what" id="a-text">–</div></div>
+      </div>
+      <h3 style="margin-top:6px">day_by_day</h3>
+      <div class="legend"><span><i class="key" style="background:var(--pred);height:3px"></i>forecast, made the day before</span><span><i class="key" style="background:var(--obs);height:3px"></i>what actually happened</span><span>click a day to look at it</span></div>
+      <div id="chart"></div>
     </div>
-    <button class="reset" id="reset" type="button">Clear choices</button>
-    <div class="answer" aria-live="polite">
-      <div class="big" id="a-obs">–</div>
-      <div class="what" id="a-text">–</div>
-    </div>
-    <h3 style="margin-top:6px">Day by day</h3>
-    <div class="legend"><span><i class="key" style="background:var(--pred);height:3px"></i>Model's forecast, made the day before</span><span><i class="key" style="background:var(--obs);height:3px"></i>What actually happened</span><span>Click a day to look at it</span></div>
-    <div id="chart"></div>
   </div>
 </section>
 
 <section aria-labelledby="h-when">
   <div class="sec-head">
-    <h2 id="h-when">When and where delays happen</h2>
-    <div class="legend"><span><i class="key" style="background:var(--pred)"></i>Forecast</span><span><i class="key tick" style="background:var(--obs)"></i>Actual</span><span>Click a row to check it above</span></div>
+    <h2 id="h-when"><span class="c">// 03 ·</span> when and where delays happen</h2>
+    <div class="legend"><span><i class="key" style="background:var(--pred)"></i>forecast</span><span><i class="key tick" style="background:var(--obs)"></i>actual</span><span>click a row to check it above</span></div>
   </div>
   <div class="grid3">
-    <div class="card"><h3>Time of day</h3><div class="scroll"><table><tbody id="tb-part"></tbody></table></div></div>
-    <div class="card"><h3>Airlines</h3><div class="scroll"><table><tbody id="tb-carrier"></tbody></table></div></div>
+    <div class="win"><div class="win-bar"><i></i><i></i><i></i><span>time_of_day</span></div><div class="win-body"><div class="scroll"><table><tbody id="tb-part"></tbody></table></div></div></div>
+    <div class="win"><div class="win-bar"><i></i><i></i><i></i><span>airlines</span></div><div class="win-body"><div class="scroll"><table><tbody id="tb-carrier"></tbody></table></div></div></div>
   </div>
-  <div class="card"><h3>Airports, most delays first</h3>
+  <div class="win"><div class="win-bar"><i></i><i></i><i></i><span>airports — most delays first</span></div><div class="win-body">
     <div class="scroll"><table><tbody id="tb-origin"></tbody></table></div>
-    <details class="more" id="more-origin"><summary>Show all airports</summary><div class="scroll"><table><tbody id="tb-origin-rest"></tbody></table></div></details>
-  </div>
+    <details class="more" id="more-origin"><summary>show all airports</summary><div class="scroll"><table><tbody id="tb-origin-rest"></tbody></table></div></details>
+  </div></div>
 </section>
 
 <section aria-labelledby="h-better">
   <div class="sec-head">
-    <h2 id="h-better">How the model got better</h2>
+    <h2 id="h-better"><span class="c">// 04 ·</span> how the model got better</h2>
     <p class="muted small" id="ladder-note"></p>
   </div>
-  <div class="card"><div class="ladder" id="ladder"></div></div>
+  <div class="win"><div class="win-bar"><i></i><i></i><i></i><span>git log --oneline</span></div><div class="win-body"><div class="ladder" id="ladder"></div><p class="note small" id="recal-note"></p></div></div>
 </section>
 
 <section aria-labelledby="h-miss">
   <div class="sec-head">
-    <h2 id="h-miss">Where it gets it wrong</h2>
-    <p class="muted small">The days the model most underestimated. These are usually storms or system problems that no schedule can see a day ahead.</p>
+    <h2 id="h-miss"><span class="c">// 05 ·</span> where it gets it wrong</h2>
+    <p class="muted small">The days the model most underestimated. Usually storms or system problems that no schedule can see a day ahead.</p>
   </div>
-  <div class="card"><ul class="miss" id="miss-list"></ul></div>
+  <div class="win"><div class="win-bar"><i></i><i></i><i></i><span>errors.log</span></div><div class="win-body"><ul class="miss" id="miss-list"></ul></div></div>
 </section>
 
 <details class="tech">
-  <summary>For data scientists: metrics, calibration and feature importance</summary>
+  <summary>&gt; for data scientists: metrics, calibration, feature importance</summary>
   <div class="tech-body">
-    <div><h3>Test-set scores</h3><p class="muted small" id="split"></p>
+    <div><h3>test_scores</h3><p class="muted small" id="split"></p>
       <div class="scroll"><table><thead><tr><th>Model</th><th>PR-AUC</th><th>ROC-AUC</th><th>Brier</th></tr></thead><tbody id="tb-models"></tbody></table></div>
       <p class="muted small" id="note"></p></div>
-    <div><h3>Are the probabilities honest?</h3><p class="muted small">Test flights sorted by predicted risk and cut into ten equal groups. Bar: forecast. Tick: actual.</p>
+    <div><h3>calibration</h3><p class="muted small">Test flights sorted by predicted risk and cut into ten equal groups. Bar: forecast after daily re-centring. Tick: actual.</p>
       <div class="scroll"><table><thead><tr><th>Group</th><th style="text-align:left">Forecast vs actual</th><th>Forecast</th><th>Actual</th><th>Flights</th></tr></thead><tbody id="tb-calib"></tbody></table></div></div>
-    <div><h3>What the model relies on</h3><p class="muted small">Share of the final model's total split gain, top 10 inputs.</p>
+    <div><h3>feature_importance</h3><p class="muted small">Share of the model's total split gain, top 10 inputs.</p>
       <div class="scroll"><table><tbody id="tb-imp"></tbody></table></div></div>
     <div class="grid3">
-      <div><h3>Airports with the largest gap</h3><div class="scroll"><table><thead><tr><th>Airport</th><th>Forecast</th><th>Actual</th><th>Gap</th></tr></thead><tbody id="tb-gap-origin"></tbody></table></div></div>
-      <div><h3>Airlines with the largest gap</h3><div class="scroll"><table><thead><tr><th>Airline</th><th>Forecast</th><th>Actual</th><th>Gap</th></tr></thead><tbody id="tb-gap-carrier"></tbody></table></div></div>
+      <div><h3>gap_by_airport</h3><div class="scroll"><table><thead><tr><th>Airport</th><th>Forecast</th><th>Actual</th><th>Gap</th></tr></thead><tbody id="tb-gap-origin"></tbody></table></div></div>
+      <div><h3>gap_by_airline</h3><div class="scroll"><table><thead><tr><th>Airline</th><th>Forecast</th><th>Actual</th><th>Gap</th></tr></thead><tbody id="tb-gap-carrier"></tbody></table></div></div>
     </div>
   </div>
 </details>
 
-<footer class="muted small">
-  Data: US Bureau of Transportation Statistics on-time data and Open-Meteo forecast archive. A flight counts as late when it leaves the gate 15 or more minutes after schedule.
-  Code: <a href="https://github.com/bekaiymbekturganova/flight-delays">github.com/bekaiymbekturganova/flight-delays</a>
+<footer>
+  # data: US Bureau of Transportation Statistics on-time data · Open-Meteo forecast archive<br>
+  # a flight counts as late when it leaves the gate 15+ minutes after schedule<br>
+  # code: <a href="https://github.com/bekaiymbekturganova/flight-delays">github.com/bekaiymbekturganova/flight-delays</a>
 </footer>
 </main>
 
@@ -169,6 +211,7 @@ const LADDER = [
   ["gradient_boosting_base", "Version 1", "Schedule and 4-week delay history"],
   ["gradient_boosting_v2", "Version 2", "+ the plane's daily schedule and the weather forecast"],
   ["gradient_boosting", "Version 3", "+ how the last week went, to catch seasonal swings"],
+  ["gradient_boosting_recalibrated", "Version 4", "+ each day, re-centre forecasts on the last 2 weeks' outcomes"],
 ];
 const LABELS = Object.fromEntries(LADDER.map(([k, a, b]) => [k, `${a}: ${b}`]));
 
@@ -286,7 +329,17 @@ function describeSelection() {
   return bits.join(" ");
 }
 
+function command() {
+  const f = [];
+  if (state.origin !== -1) f.push(`--airport ${cube.origins[state.origin] === "Other airports" ? "other" : cube.origins[state.origin]}`);
+  if (state.carrier !== -1) f.push(`--airline ${cube.carriers[state.carrier]}`);
+  if (state.part !== -1) f.push(`--time ${PARTS_SHORT[state.part]}`);
+  if (state.day !== -1) f.push(`--day ${cube.dates[state.day]}`);
+  return f.length ? f.join(" ") : "--all";
+}
+
 function render() {
+  $("a-cmd").textContent = command();
   const all = aggregate(null).get(0) || {n: 0, late: 0, p: 0};
   if (!all.n) { $("a-obs").textContent = "–"; $("a-text").textContent = "No flights match these choices."; }
   else {
@@ -313,14 +366,15 @@ function takeaways() {
   const parts = aggregate("part", [], false), rate = k => { const a = parts.get(k); return a ? a.late / a.n : NaN; };
   const lo = [...parts.keys()].reduce((a, b) => rate(a) <= rate(b) ? a : b), hi = [...parts.keys()].reduce((a, b) => rate(a) >= rate(b) ? a : b);
   const sig = (metrics.importance || []).find(f => WHY[f.feature]);
-  const res = metrics.test_metrics, first = res.route_history, last = res.gradient_boosting;
+  const res = metrics.test_metrics, first = res.route_history, last = res.gradient_boosting_recalibrated || res.gradient_boosting;
   const cards = [
     [`${(catchShare * 10).toFixed(0)} in 10`, `late flights were among the 20% of flights the model rated riskiest. Picking flights at random would catch only 2 in 10.`],
     [`${(rate(hi) / rate(lo)).toFixed(1)}×`, `${PARTS_SHORT[hi][0].toUpperCase() + PARTS_SHORT[hi].slice(1)} flights left late ${(rate(hi) / rate(lo)).toFixed(1)} times as often as ${PARTS_SHORT[lo]} flights (${pct0(rate(hi))} vs ${pct0(rate(lo))}).${lo === 0 ? " The earliest flight of the day is the safest bet." : ""}`],
     sig ? WHY[sig.feature] : ["History", "Recent delay history at the airport is the strongest clue."],
     [`${first.pr_auc.toFixed(2)} → ${last.pr_auc.toFixed(2)}`, `Score went from a simple rule to the final model (PR-AUC, higher is better; random guessing scores ${metrics.data.test_delay_rate.toFixed(2)}). See how each step helped below.`],
   ];
-  $("takeaways").innerHTML = cards.map(([b, p]) => `<div class="card take"><b>${b}</b><p>${p}</p></div>`).join("");
+  const keys = ["# catch_rate", "# time_of_day", "# strongest_clue", "# progress"];
+  $("takeaways").innerHTML = cards.map(([b, p], i) => `<div class="win take"><span class="k">${keys[i]}</span><b>${b}</b><p>${p}</p></div>`).join("");
 }
 
 function ladder() {
@@ -329,6 +383,9 @@ function ladder() {
   const scale = v => 100 * (v - lo * 0.8) / (top - lo * 0.8);
   $("ladder").innerHTML = items.map(([k, a, b]) =>
     `<div class="rung${res[k].pr_auc === top ? " best" : ""}"><div class="lbl"><b>${a}</b><span>${b}</span></div><div class="track" title="PR-AUC ${res[k].pr_auc.toFixed(3)}"><div class="fill" style="width:${Math.max(2, scale(res[k].pr_auc))}%"></div></div><div class="val">${res[k].pr_auc.toFixed(2)}</div></div>`).join("");
+  const rc = metrics.recalibration;
+  $("recal-note").innerHTML = rc ? `<b>Version 4 fixes the level, not the order.</b> Trained on autumn and winter, the model expected too few delays in summer: on average it said ${pct(rc.mean_raw)} while ${pct(rc.observed)} of flights actually left late. Each evening it now looks at how its last ${rc.window_days} days of forecasts compared with what happened and shifts tomorrow's numbers by that amount. After the shift it says ${pct(rc.mean_recalibrated)} on average.` : "";
+  $("recal-note").hidden = !rc;
   $("ladder-note").textContent = `Score: PR-AUC, which measures how well the model puts late flights ahead of on-time ones. Random guessing scores ${lo.toFixed(2)}, a perfect model 1.00. All scored on the same ${num(metrics.data.test.flights)} test flights.`;
 }
 
@@ -392,6 +449,9 @@ function setup() {
   });
   const d = metrics.data;
   $("intro").innerHTML = `A machine-learning model that predicts, the day before, which US flights will leave the gate 15 or more minutes late. It learned from ${num(d.train.flights)} past flights and is tested here on <strong>${num(d.test.flights)} flights it had never seen</strong> (${niceDate(d.test.from, {month: "long", day: "numeric"})} – ${niceDate(d.test.to, {month: "long", day: "numeric", year: "numeric"})}).`;
+  const best = metrics.test_metrics.gradient_boosting_recalibrated || metrics.test_metrics.gradient_boosting;
+  $("badges").innerHTML = [["model", "LightGBM"], ["test_flights", num(d.test.flights)], ["pr_auc", best.pr_auc.toFixed(2)], ["leakage_tests", "passing"]]
+    .map(([k, v]) => `<span class="badge">${k}: <b>${v}</b></span>`).join("");
   takeaways(); ladder(); misses(); technical(); render();
 }
 
