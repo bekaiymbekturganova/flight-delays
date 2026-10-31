@@ -28,7 +28,7 @@ from .config import CLEAN_PATH
 
 TABLE = "flights"
 MAX_ROWS = 200
-DEFAULT_MODEL = os.environ.get("FLIGHTDELAYS_LLM_MODEL", "claude-sonnet-4-5")
+DEFAULT_MODEL = os.environ.get("FLIGHTDELAYS_LLM_MODEL", "claude-sonnet-5-5")
 
 # What the model is told about the table. Kept next to the checks so the two
 # cannot drift apart: every column listed here is the full allowed set.
@@ -186,7 +186,7 @@ def anthropic_llm(model: str = DEFAULT_MODEL) -> LLM:
 
     def call(system: str, question: str) -> str:
         msg = client.messages.create(
-            model=model, max_tokens=800, temperature=0, system=system,
+            model=model, max_tokens=800, system=system,
             messages=[{"role": "user", "content": question}],
         )
         return "".join(b.text for b in msg.content if getattr(b, "type", "") == "text")
