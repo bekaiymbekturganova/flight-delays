@@ -1,0 +1,43 @@
+name: ask eval
+# Scores the plain-English question-to-SQL assistant on real BTS data.
+# Needs a repository secret ANTHROPIC_API_KEY. Start it by hand from the Actions tab.
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: "First month (YYYY-MM)"
+        default: "2025-04"
+      end:
+        description: "Last month (YYYY-MM)"
+        default: "2025-06"
+permissions:
+  contents: read
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[ask]"
+      - name: Download and clean the flights
+        run: |
+          flightdelays download --start "${{ inputs.start }}" --end "${{ inputs.end }}"
+          flightdelays clean
+      - name: Score the assistant
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::Add a repository secret named ANTHROPIC_API_KEY first (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          flightdelays ask-eval --out ask_eval_results.json | tee eval.txt
+          { echo '## Question-to-SQL eval'; echo '```'; cat eval.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ask-eval-results
+          path: ask_eval_results.json

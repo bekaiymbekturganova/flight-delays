@@ -24,7 +24,8 @@ def main(argv: list[str] | None = None) -> None:
     p = sub.add_parser("ask", help="ask the flight data a question in plain English")
     p.add_argument("question")
     p.add_argument("--json", action="store_true", help="print the answer as JSON")
-    sub.add_parser("ask-eval", help="score the question-to-SQL assistant on the eval set")
+    p = sub.add_parser("ask-eval", help="score the question-to-SQL assistant on the eval set")
+    p.add_argument("--out", help="also save every question, SQL and verdict to this JSON file")
     args = parser.parse_args(argv)
 
     if args.step in ("ask", "ask-eval"):
@@ -39,6 +40,9 @@ def main(argv: list[str] | None = None) -> None:
             for case in result["cases"]:
                 print(("ok   " if case["ok"] else "MISS ") + case["question"])
             print(f"\n{result['correct']}/{result['total']} correct ({result['accuracy']:.0%})")
+            if args.out:
+                with open(args.out, "w") as f:
+                    json.dump(result, f, indent=2)
         return
 
     if args.step in ("download", "all"):
