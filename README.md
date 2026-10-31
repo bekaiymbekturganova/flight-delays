@@ -99,6 +99,12 @@ It is also on the API: `POST /ask {"question": "..."}`.
   correct when its rows match the hand-written query's rows (column names, row
   order and extra columns such as a flight count are ignored). The scoring
   itself is tested offline with a fake model, so CI needs no API key.
+- **Result on real data** (BTS flights, April to June 2025, Claude Sonnet):
+  **17/18 correct**. The first run scored 15/18; two of its three misses were
+  mistakes in the answer key and one was an ambiguous question, all fixed in
+  the commit history. The remaining miss is a near-tie between two weekdays
+  that the model broke on the rounded rate. To rerun: Actions > **ask eval**
+  (needs an `ANTHROPIC_API_KEY` secret); results land on the `eval-results` branch.
 
 ## Run it
 
