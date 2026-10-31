@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import time
 import zipfile
 from pathlib import Path
 
@@ -23,6 +24,22 @@ def month_range(start: str, end: str) -> list[tuple[int, int]]:
     return months
 
 
+def _get_with_retries(url: str, attempts: int = 5) -> requests.Response:
+    """The BTS server sometimes drops the connection; wait and try again."""
+    for attempt in range(1, attempts + 1):
+        try:
+            response = requests.get(url, timeout=300)
+            response.raise_for_status()
+            return response
+        except (requests.ConnectionError, requests.Timeout, requests.HTTPError) as e:
+            if attempt == attempts:
+                raise
+            wait = 15 * attempt
+            print(f"download failed ({e.__class__.__name__}), retrying in {wait}s", flush=True)
+            time.sleep(wait)
+    raise AssertionError("unreachable")
+
+
 def download_month(year: int, month: int, out_dir: Path = RAW_DIR) -> Path:
     """Fetch one month and write its CSV to out_dir. Skips files already there."""
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -30,8 +47,7 @@ def download_month(year: int, month: int, out_dir: Path = RAW_DIR) -> Path:
     if target.exists():
         return target
     url = BTS_URL.format(year=year, month=month)
-    response = requests.get(url, timeout=300)
-    response.raise_for_status()
+    response = _get_with_retries(url)
     with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
         csv_names = [n for n in archive.namelist() if n.lower().endswith(".csv")]
         if len(csv_names) != 1:
