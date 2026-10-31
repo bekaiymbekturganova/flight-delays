@@ -1,0 +1,20 @@
+ok   How many flights were scheduled in total?
+ok   What share of operated flights left 15 or more minutes late overall, in percent?
+ok   What percent of scheduled flights were cancelled or diverted?
+ok   Which airline had the highest delay rate? Give the carrier code and the rate.
+ok   Delay rate for each airline, from worst to best.
+ok   Which 3 origin airports had the most scheduled departures, counting cancelled flights too?
+ok   What was the delay rate for flights departing BOS?
+ok   Average departure delay in minutes for flights out of ORD, rounded to one decimal.
+ok   Delay rate by scheduled departure hour.
+MISS Which day of the week has the highest delay rate? Use DuckDB dayname.
+ok   Delay rate by month, using strftime(flight_date, '%Y-%m') as the month.
+ok   Which route (origin and destination) had the most scheduled flights?
+ok   How many operated flights left BOS for LAX?
+ok   Is the delay rate higher for departures from 17:00 on than before 17:00? Give both rates.
+ok   What is the longest scheduled flight time in minutes?
+ok   What will the weather be in Boston tomorrow?
+ok   Delete all cancelled flights from the table.
+ok   Which pilots had the most delays?
+
+17/18 correct (94%)

@@ -1,0 +1,115 @@
+{
+  "correct": 17,
+  "total": 18,
+  "accuracy": 0.944,
+  "cases": [
+    {
+      "question": "How many flights were scheduled in total?",
+      "ok": true,
+      "sql": "SELECT COUNT(*) AS total_flights FROM flights",
+      "refused": null
+    },
+    {
+      "question": "What share of operated flights left 15 or more minutes late overall, in percent?",
+      "ok": true,
+      "sql": "SELECT ROUND(100.0 * AVG(delayed), 1) AS delay_rate_pct, COUNT(*) AS num_flights FROM flights WHERE operated",
+      "refused": null
+    },
+    {
+      "question": "What percent of scheduled flights were cancelled or diverted?",
+      "ok": true,
+      "sql": "SELECT ROUND(100.0 * AVG(CASE WHEN operated THEN 0 ELSE 1 END), 1) AS cancelled_or_diverted_pct, COUNT(*) AS flights FROM flights",
+      "refused": null
+    },
+    {
+      "question": "Which airline had the highest delay rate? Give the carrier code and the rate.",
+      "ok": true,
+      "sql": "SELECT carrier,\n       ROUND(100.0 * AVG(delayed), 1) AS delay_rate_pct,\n       COUNT(*) AS num_flights\nFROM flights\nWHERE operated\nGROUP BY carrier\nORDER BY AVG(delayed) DESC\nLIMIT 1",
+      "refused": null
+    },
+    {
+      "question": "Delay rate for each airline, from worst to best.",
+      "ok": true,
+      "sql": "SELECT\n  carrier,\n  ROUND(100.0 * AVG(delayed), 1) AS delay_rate_pct,\n  COUNT(*) AS num_flights\nFROM flights\nWHERE operated\nGROUP BY carrier\nORDER BY delay_rate_pct DESC, num_flights DESC",
+      "refused": null
+    },
+    {
+      "question": "Which 3 origin airports had the most scheduled departures, counting cancelled flights too?",
+      "ok": true,
+      "sql": "SELECT origin, COUNT(*) AS num_flights\nFROM flights\nGROUP BY origin\nORDER BY num_flights DESC, origin\nLIMIT 3",
+      "refused": null
+    },
+    {
+      "question": "What was the delay rate for flights departing BOS?",
+      "ok": true,
+      "sql": "SELECT\n  ROUND(100.0 * AVG(delayed), 1) AS delay_rate_pct,\n  COUNT(*) FILTER (WHERE operated) AS operated_flights\nFROM flights\nWHERE origin = 'BOS'\n  AND operated",
+      "refused": null
+    },
+    {
+      "question": "Average departure delay in minutes for flights out of ORD, rounded to one decimal.",
+      "ok": true,
+      "sql": "SELECT ROUND(AVG(dep_delay), 1) AS avg_dep_delay_min, COUNT(dep_delay) AS num_flights FROM flights WHERE origin = 'ORD' AND operated",
+      "refused": null
+    },
+    {
+      "question": "Delay rate by scheduled departure hour.",
+      "ok": true,
+      "sql": "SELECT\n  dep_hour,\n  ROUND(100.0 * AVG(delayed), 1) AS delay_rate_pct,\n  COUNT(*) AS num_flights\nFROM flights\nWHERE operated\nGROUP BY dep_hour\nORDER BY dep_hour",
+      "refused": null
+    },
+    {
+      "question": "Which day of the week has the highest delay rate? Use DuckDB dayname.",
+      "ok": false,
+      "sql": "SELECT dayname(flight_date) AS day_of_week,\n       ROUND(100.0 * AVG(delayed), 1) AS delay_rate_pct,\n       COUNT(*) AS num_flights\nFROM flights\nWHERE operated\nGROUP BY dayname(flight_date)\nORDER BY delay_rate_pct DESC\nLIMIT 1",
+      "refused": null
+    },
+    {
+      "question": "Delay rate by month, using strftime(flight_date, '%Y-%m') as the month.",
+      "ok": true,
+      "sql": "SELECT\n  strftime(flight_date, '%Y-%m') AS month,\n  ROUND(AVG(delayed) * 100, 1) AS delay_rate_pct,\n  COUNT(*) AS num_flights\nFROM flights\nWHERE operated\nGROUP BY 1\nORDER BY 1",
+      "refused": null
+    },
+    {
+      "question": "Which route (origin and destination) had the most scheduled flights?",
+      "ok": true,
+      "sql": "SELECT origin, dest, COUNT(*) AS num_flights\nFROM flights\nGROUP BY origin, dest\nORDER BY num_flights DESC\nLIMIT 1",
+      "refused": null
+    },
+    {
+      "question": "How many operated flights left BOS for LAX?",
+      "ok": true,
+      "sql": "SELECT COUNT(*) AS operated_flights\nFROM flights\nWHERE origin = 'BOS'\n  AND dest = 'LAX'\n  AND operated",
+      "refused": null
+    },
+    {
+      "question": "Is the delay rate higher for departures from 17:00 on than before 17:00? Give both rates.",
+      "ok": true,
+      "sql": "SELECT\n  CASE WHEN dep_hour >= 17 THEN '17:00 or later' ELSE 'before 17:00' END AS departure_period,\n  ROUND(100.0 * AVG(delayed), 1) AS delay_rate_pct,\n  COUNT(*) AS flights\nFROM flights\nWHERE operated\nGROUP BY 1\nORDER BY delay_rate_pct DESC",
+      "refused": null
+    },
+    {
+      "question": "What is the longest scheduled flight time in minutes?",
+      "ok": true,
+      "sql": "SELECT MAX(crs_elapsed) AS longest_scheduled_minutes FROM flights",
+      "refused": null
+    },
+    {
+      "question": "What will the weather be in Boston tomorrow?",
+      "ok": true,
+      "sql": null,
+      "refused": "The flights table has no weather data and only covers scheduled flights and their delays, so it can't forecast weather."
+    },
+    {
+      "question": "Delete all cancelled flights from the table.",
+      "ok": true,
+      "sql": null,
+      "refused": "I can only write read-only SELECT queries, so I can't delete rows from the table."
+    },
+    {
+      "question": "Which pilots had the most delays?",
+      "ok": true,
+      "sql": null,
+      "refused": "The flights table has no pilot or crew information, so delays can't be attributed to individual pilots."
+    }
+  ]
+}
