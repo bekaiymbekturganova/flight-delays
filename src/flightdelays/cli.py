@@ -21,7 +21,25 @@ def main(argv: list[str] | None = None) -> None:
         p.add_argument("--end", required=True, help="last month, YYYY-MM")
     for name in ("clean", "weather", "features", "train", "report"):
         sub.add_parser(name)
+    p = sub.add_parser("ask", help="ask the flight data a question in plain English")
+    p.add_argument("question")
+    p.add_argument("--json", action="store_true", help="print the answer as JSON")
+    sub.add_parser("ask-eval", help="score the question-to-SQL assistant on the eval set")
     args = parser.parse_args(argv)
+
+    if args.step in ("ask", "ask-eval"):
+        from . import ask as ask_step
+        con = ask_step.connect()
+        llm = ask_step.anthropic_llm()
+        if args.step == "ask":
+            answer = ask_step.ask(args.question, llm, con)
+            print(json.dumps(answer.as_dict(), indent=2) if args.json else ask_step.format_answer(answer))
+        else:
+            result = ask_step.evaluate(llm, con)
+            for case in result["cases"]:
+                print(("ok   " if case["ok"] else "MISS ") + case["question"])
+            print(f"\n{result['correct']}/{result['total']} correct ({result['accuracy']:.0%})")
+        return
 
     if args.step in ("download", "all"):
         download_step.download(args.start, args.end)

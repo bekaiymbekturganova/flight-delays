@@ -67,6 +67,39 @@ history up to yesterday. No same-day outcomes and no actual departure times.
   delay, and cancellations have different causes.
   (`tests/test_pipeline.py::test_cancellations_on_the_flight_day_do_not_leak`)
 
+## Ask the data in plain English
+
+`flightdelays ask` turns a question into one DuckDB query with an LLM (Claude),
+runs it, and prints the answer together with the SQL, so you can see exactly
+what was counted.
+
+```bash
+pip install -e ".[ask]"
+export ANTHROPIC_API_KEY=...        # keep it out of git, e.g. in .env
+flightdelays ask "Which airline was late most often out of BOS in December?"
+flightdelays ask-eval               # score it on the hand-checked question set
+```
+
+It is also on the API: `POST /ask {"question": "..."}`.
+
+- **The checks matter more than the prompt.** Before anything runs, the SQL is
+  parsed (sqlglot) and refused unless it is a single SELECT that reads only the
+  `flights` table and only real columns. No writes, no other files, no
+  `read_csv`, no environment variables.
+- **DuckDB is locked down as well.** The connection may read only the one
+  parquet file and its settings are locked, so even a query that got past the
+  parser cannot open anything else
+  (`tests/test_ask.py::test_connection_cannot_read_other_files`).
+- **One retry with the error.** If a query is refused or fails, the error goes
+  back to the model once. That fixes most small mistakes, like a wrong column name.
+- **Says "can't answer" instead of guessing.** Questions the table cannot answer
+  (weather, pilots) come back as a refusal with a reason, not invented SQL.
+- **Measured, not eyeballed.** `ask_eval.json` holds 18 questions with
+  hand-written SQL, including three that must be refused. An answer counts as
+  correct when its rows match the hand-written query's rows (column names, row
+  order and extra columns such as a flight count are ignored). The scoring
+  itself is tested offline with a fake model, so CI needs no API key.
+
 ## Run it
 
 ```bash

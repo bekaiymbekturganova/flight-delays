@@ -85,3 +85,23 @@ def predict(flight: Flight) -> Prediction:
         route_history_rate=None if pd.isna(rate) else round(float(rate), 4),
         note="exact scheduled hour" if exact_hour else "nearest scheduled hour on this route used for history",
     )
+
+
+class Question(BaseModel):
+    question: str = Field(examples=["Which airline was late most often out of BOS?"], max_length=500)
+
+
+@lru_cache
+def _ask_backend():
+    from . import ask
+    return ask, ask.connect(), ask.anthropic_llm()
+
+
+@app.post("/ask")
+def ask_question(q: Question) -> dict:
+    """Plain-English question about the flight data. Returns the rows and the SQL used."""
+    try:
+        ask, con, llm = _ask_backend()
+    except (FileNotFoundError, RuntimeError) as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    return ask.ask(q.question, llm, con).as_dict()
