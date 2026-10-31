@@ -11,7 +11,7 @@ on:
         description: "Last month (YYYY-MM)"
         default: "2025-06"
 permissions:
-  contents: read
+  contents: write  # to save the results on the eval-results branch
 jobs:
   eval:
     runs-on: ubuntu-latest
@@ -34,8 +34,21 @@ jobs:
             echo "::error::Add a repository secret named ANTHROPIC_API_KEY first (Settings > Secrets and variables > Actions)."
             exit 1
           fi
-          flightdelays ask-eval --out ask_eval_results.json | tee eval.txt
-          { echo '## Question-to-SQL eval'; echo '```'; cat eval.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          set -o pipefail
+          flightdelays ask-eval --out ask_eval_results.json 2>&1 | tee eval.txt
+      - name: Show and save the results
+        if: always()
+        run: |
+          { echo '## Question-to-SQL eval'; echo '```'; tail -n 60 eval.txt 2>/dev/null; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          # Keep the latest results on their own branch so they can be read
+          # (and shown on the site) without digging through Actions logs.
+          mkdir -p /tmp/out && cp eval.txt ask_eval_results.json /tmp/out/ 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan eval-results
+          git rm -rfq . && git clean -fdxq
+          cp /tmp/out/* . 2>/dev/null || true
+          git add -A && git commit -qm "Eval results from run ${{ github.run_id }}" && git push -f origin eval-results
       - uses: actions/upload-artifact@v4
         if: always()
         with:
